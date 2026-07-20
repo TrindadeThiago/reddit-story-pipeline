@@ -1,0 +1,25 @@
+{
+  "name": "reddit-story-pipeline",
+  "version": "0.1.0",
+  "description": "Pipeline: Reddit -> TTS (Piper/ElevenLabs) -> legenda (whisper) -> video vertical -> revisao manual -> publicacao",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx src/scripts/run-pipeline.ts",
+    "regenerate:elevenlabs": "tsx src/scripts/regenerate-with-elevenlabs.ts",
+    "publish": "tsx src/scripts/publish.ts",
+    "discard": "tsx src/scripts/discard.ts",
+    "test": "tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "fluent-ffmpeg": "^2.1.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.0"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
