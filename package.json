@@ -1,6 +1,6 @@
 {
   "name": "reddit-story-pipeline",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Pipeline: Reddit -> TTS (Piper/ElevenLabs) -> legenda (whisper) -> video vertical -> revisao manual -> publicacao",
   "type": "module",
   "scripts": {
