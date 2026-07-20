@@ -5,19 +5,20 @@ import type { ComposedVideo } from "../../types.js";
 interface ComposeOptions {
   narrationAudioPath: string;
   backgroundVideoPath: string;
-  srtCaptionsPath: string;
+  captionsAssPath: string; // legenda .ass com destaque (highlight) por palavra
   outputPath: string; // .mp4 final, formato retrato 1080x1920
 }
 
 /**
  * Junta narracao + video de fundo (cortado/loopado para bater com a duracao
- * do audio) + legenda embutida, exportando em 1080x1920 (retrato).
+ * do audio) + legenda embutida (com destaque de palavra), exportando em
+ * 1080x1920 (retrato).
  */
 export function composeVideo(options: ComposeOptions): Promise<ComposedVideo> {
   const requiredInputs: Array<[string, string]> = [
     ["narrationAudioPath", options.narrationAudioPath],
     ["backgroundVideoPath", options.backgroundVideoPath],
-    ["srtCaptionsPath", options.srtCaptionsPath],
+    ["captionsAssPath", options.captionsAssPath],
   ];
   for (const [field, path] of requiredInputs) {
     if (!existsSync(path)) {
@@ -34,7 +35,7 @@ export function composeVideo(options: ComposeOptions): Promise<ComposedVideo> {
       .input(options.narrationAudioPath)
       .complexFilter([
         "[0:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920[bg]",
-        `[bg]subtitles=${options.srtCaptionsPath}[final]`,
+        `[bg]subtitles=${options.captionsAssPath}[final]`,
       ])
       .map("[final]")
       .outputOptions(["-map", "1:a", "-shortest", "-c:v libx264", "-c:a aac"])

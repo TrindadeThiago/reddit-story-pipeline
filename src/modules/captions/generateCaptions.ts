@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
 import type { CaptionResult, CaptionWord } from "../../types.js";
+import { buildHighlightedAss } from "./buildHighlightedAss.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,5 +34,8 @@ export async function generateCaptions(
   const wordsRaw = await readFile(`${outputSrtPath}.words.json`, "utf-8");
   const words = JSON.parse(wordsRaw) as CaptionWord[];
 
-  return { words, srtFilePath: outputSrtPath };
+  const assFilePath = outputSrtPath.replace(/\.srt$/, ".ass");
+  await buildHighlightedAss(words, assFilePath);
+
+  return { words, srtFilePath: outputSrtPath, assFilePath };
 }

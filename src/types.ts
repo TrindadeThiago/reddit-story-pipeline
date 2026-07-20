@@ -22,6 +22,7 @@ export interface CaptionWord {
 export interface CaptionResult {
   words: CaptionWord[];
   srtFilePath: string;
+  assFilePath: string; // legenda com destaque (highlight) da palavra ativa
 }
 
 export interface ComposedVideo {

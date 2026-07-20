@@ -78,7 +78,7 @@ export async function runPipelineForStory(
     composeVideo({
       narrationAudioPath: job.narration!.audioFilePath,
       backgroundVideoPath: backgroundVideoLocalPath,
-      srtCaptionsPath: job.captions!.srtFilePath,
+      captionsAssPath: job.captions!.assFilePath,
       outputPath: join(workDir, "final.mp4"),
     })
   );
