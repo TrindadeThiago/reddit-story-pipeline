@@ -27,6 +27,7 @@ Detalhado em [`docs/architecture.md`](docs/architecture.md).
 - **WhisperX** — `pip install whisperx` (usado por `scripts/transcribe.py`; combina whisper + forced alignment via wav2vec2 para timestamp por palavra mais preciso).
 - **Conta ElevenLabs** (opcional, só para o caminho 2) — chave de API + `voice_id` de uma voz em português.
 - **Conta Pexels** (gratuita) — chave de API para busca de vídeo de fundo.
+- **yt-dlp** (opcional) — `pipx install yt-dlp`, usado por `npm run download:background-pack` para baixar um pack próprio de vídeos de fundo de uma playlist do YouTube.
 
 Referência completa de variáveis de ambiente em [`docs/environment.md`](docs/environment.md).
 
@@ -47,6 +48,7 @@ npm run generate -- --input storage/manual-stories --story manual-0002    # usa 
 npm run publish -- <jobId>                # caminho 1
 npm run regenerate:elevenlabs -- <jobId>  # caminho 2
 npm run discard -- <jobId>                # caminho 3
+npm run download:background-pack -- --url <playlist>   # baixa pack proprio de videos de fundo (yt-dlp)
 npm test
 ```
 
