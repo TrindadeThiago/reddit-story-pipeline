@@ -18,10 +18,10 @@ interface RedditStory {
 ```
 
 Formato de entrada do pipeline, seja vindo do Reddit real
-(`fetchStories`) ou de um arquivo `--input` manual
-(ver [cli.md](./cli.md#npm-run-generate----input-arquivojson)). `body` é o
-texto que vira a narração (`ttsProvider.synthesize(story.body, ...)`) — sem
-nenhum processamento/resumo antes.
+(`fetchStories`) ou de uma pasta `--input` manual, um arquivo `.json` por
+história (ver [cli.md](./cli.md#npm-run-generate----input-pasta---story-id-ou-arquivo---background-query-termo---background-source-pexelslocal)).
+`body` é o texto que vira a narração (`ttsProvider.synthesize(story.body, ...)`)
+— sem nenhum processamento/resumo antes.
 
 ## `NarrationResult`
 
@@ -72,6 +72,33 @@ interface ComposedVideo {
   videoFilePath: string; // final.mp4, 1080x1920
 }
 ```
+
+## `BackgroundClip`, `BackgroundPackFileIndex`, `BackgroundPackIndex`
+
+```ts
+interface BackgroundClip {
+  startSeconds: number;
+  endSeconds: number;
+}
+
+interface BackgroundPackFileIndex {
+  fileName: string;
+  durationSeconds: number;
+  clips: BackgroundClip[];
+}
+
+interface BackgroundPackIndex {
+  generatedAt: string;
+  files: BackgroundPackFileIndex[];
+}
+```
+
+Formato do `index.json` gerado por `index:background-pack`
+(`indexBackgroundPack`, ver [modules.md](./modules.md#srcmodulesvideobackgroundpackindexerts)).
+Cada `BackgroundClip` é um trecho contínuo (sem corte de cena no meio)
+dentro de um dos vídeos do pack local; é a unidade que o provider local
+(`buildLocalBackgroundVideo`) sorteia e concatena para montar o vídeo de
+fundo de uma história, quando `BACKGROUND_SOURCE=local`.
 
 ## `ReviewDecision`
 

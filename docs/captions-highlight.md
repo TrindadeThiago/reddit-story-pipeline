@@ -52,7 +52,7 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,90,&HFFFFFF&,&HFFFFFF&,&H000000&,&H00000000&,1,0,0,0,100,100,0,0,1,6,0,2,80,80,220,1
+Style: Default,Arial,90,&HFFFFFF&,&HFFFFFF&,&H000000&,&H00000000&,1,0,0,0,100,100,0,0,1,6,0,8,80,80,1060,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -97,11 +97,12 @@ Tudo fica em `src/modules/captions/buildHighlightedAss.ts`:
 | Quantas palavras por tela | constante `WORDS_PER_LINE` |
 | Fonte, tamanho, posição, contorno | linha `Style: Default,...` no header ASS (`formatAssTimestamp`/header são montados na própria função) |
 
-O `Style` atual (`Fontsize=90`, `Alignment=2` = centralizado embaixo,
-`MarginV=220`, `Outline=6`) foi calibrado para o canvas 1080x1920
-(`PlayResX`/`PlayResY`) que `composeVideo` usa como saída — mudar a
-resolução de saída sem ajustar `PlayResX`/`PlayResY` desalinha o
-posicionamento da legenda.
+O `Style` atual (`Fontsize=90`, `Alignment=8` = ancorado no topo-centro,
+`MarginV=1060`, `Outline=6`) foi calibrado para o canvas 1080x1920
+(`PlayResX`/`PlayResY`) que `composeVideo` usa como saída — com
+`PlayResY=1920`, `MarginV=1060` deixa o texto um pouco abaixo do centro do
+frame (960), não colado na base. Mudar a resolução de saída sem ajustar
+`PlayResX`/`PlayResY` desalinha o posicionamento da legenda.
 
 ## Como validar visualmente
 

@@ -18,7 +18,8 @@ abaixo instaladas fora do `npm`.
 | **Piper TTS** | `PiperProvider` (fluxo padrão, sempre) | Binário + modelo de voz pt-BR — [github.com/rhasspy/piper](https://github.com/rhasspy/piper). Caminho do modelo em `PIPER_MODEL_PATH`. |
 | **WhisperX** | `scripts/transcribe.py` (sempre) | `pip install whisperx`. Recomendado em venv isolado (ex: `.venv-whisperx/`) para não afetar o Python global. Pesado em RAM — ver nota abaixo. |
 | **Conta ElevenLabs** | `ElevenLabsProvider` (só no caminho 2 da revisão) | Chave de API + `voice_id` de uma voz em português. |
-| **Conta Pexels** | `findBackgroundVideo` (sempre) | Gratuita — [pexels.com/api](https://www.pexels.com/api/). |
+| **Conta Pexels** | `findBackgroundVideo` (só com `BACKGROUND_SOURCE=pexels`, o padrão) | Gratuita — [pexels.com/api](https://www.pexels.com/api/). |
+| **yt-dlp** | `download:background-pack` (só se usar `BACKGROUND_SOURCE=local`) | `pipx install yt-dlp` (ou `pip install -U yt-dlp`). Baixa a playlist do YouTube com o pack de vídeos de fundo próprio. |
 | **App Reddit "script"** | `fetchStories` (só se **não** usar `--input`) | Criar em [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) → `client_id`/`client_secret`. |
 
 ### Nota sobre RAM e WhisperX
@@ -59,10 +60,19 @@ Referência completa (ver também [`.env.example`](../.env.example)):
 | `REDDIT_CLIENT_SECRET` | `generate` sem `--input` | Client secret do mesmo app | — |
 | `REDDIT_USER_AGENT` | Recomendado sempre | User-Agent enviado ao Reddit | `reddit-story-pipeline/0.1` |
 | `ELEVENLABS_API_KEY` | `regenerate:elevenlabs` | Chave de API do ElevenLabs | — |
+| `ELEVENLABS_API_URL` | Opcional | Base URL da API do ElevenLabs | `https://api.elevenlabs.io/v1` |
 | `ELEVENLABS_VOICE_ID` | `regenerate:elevenlabs` | ID de voz pt-BR na conta ElevenLabs | — |
+| `ELEVENLABS_MODEL_ID` | Opcional | Modelo de TTS do ElevenLabs (`model_id` no request) | `eleven_flash_v2_5` |
 | `ELEVENLABS_MONTHLY_CHAR_LIMIT` | Opcional | Teto de caracteres/mês antes do `QuotaTracker` bloquear | `10000` |
 | `PIPER_MODEL_PATH` | `generate` e `regenerate:elevenlabs` | Caminho do `.onnx` do modelo Piper | — |
-| `PEXELS_API_KEY` | `generate` e `regenerate:elevenlabs` | Chave de API do Pexels | — |
+| `PIPER_LENGTH_SCALE` | Opcional | Velocidade da narração do Piper (`--length_scale`; `<1` = mais rápido, `>1` = mais lento) | `0.85` |
+| `PEXELS_API_KEY` | `generate`/`regenerate:elevenlabs` com `BACKGROUND_SOURCE=pexels` | Chave de API do Pexels | — |
+| `PEXELS_API_URL` | Opcional | Base URL da API do Pexels | `https://api.pexels.com` |
+| `BACKGROUND_SOURCE` | Opcional | `pexels` (busca no Pexels) ou `local` (usa pack próprio indexado) | `pexels` |
+| `BACKGROUND_QUERY` | Opcional | Termo de busca do vídeo de fundo no Pexels (só com `BACKGROUND_SOURCE=pexels`) | `pessoa organizando` |
+| `BACKGROUND_PACK_PLAYLIST_URL` | `download:background-pack` (se não passar `--url`) | URL da playlist do YouTube com o pack de vídeos de fundo | — |
+| `BACKGROUND_PACK_DIR` | Opcional | Pasta onde o pack de vídeos de fundo é baixado/indexado | `storage/background-pack` |
+| `BACKGROUND_PACK_INDEX_PATH` | Opcional | Caminho do índice de cenas (`index:background-pack`), consumido com `BACKGROUND_SOURCE=local` | `storage/background-pack/index.json` |
 | `WHISPER_MODEL_SIZE` | Opcional | Tamanho do modelo WhisperX (`tiny`/`base`/`small`/...) | `base` |
 | `WHISPERX_PYTHON_BIN` | Opcional | Caminho do interpretador Python com WhisperX instalado | `.venv-whisperx/bin/python3` se existir, senão `python3` do PATH |
 
@@ -77,5 +87,7 @@ fallback silencioso.
 | `models/` | Modelo de voz Piper (`.onnx`) | Binário grande, baixado separadamente |
 | `.venv-whisperx/` | venv Python isolado do WhisperX | Ambiente local, não portável |
 | `storage/pending-review/*`, `approved/*`, `published/*`, `discarded/*` | Jobs gerados em runtime | Saída, não código-fonte (`.gitkeep` mantém a estrutura de pastas) |
+| `storage/manual-stories/*` | Histórias manuais (`--input`), um `.json` por história | Conteúdo/dado local, não código-fonte |
+| `storage/background-pack/*` | Vídeos baixados por `download:background-pack` + `index.json` gerado por `index:background-pack` | Binários grandes, baixados separadamente |
 | `storage/elevenlabs-quota.json` | Estado da cota mensal | Estado local mutável |
 | `.env` | Credenciais reais | Segredo |

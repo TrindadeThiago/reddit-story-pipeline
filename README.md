@@ -26,8 +26,8 @@ Detalhado em [`docs/architecture.md`](docs/architecture.md).
 - **Piper TTS** — binário + modelo de voz pt-BR ([github.com/rhasspy/piper](https://github.com/rhasspy/piper)). Aponte o caminho do modelo em `PIPER_MODEL_PATH`.
 - **WhisperX** — `pip install whisperx` (usado por `scripts/transcribe.py`; combina whisper + forced alignment via wav2vec2 para timestamp por palavra mais preciso).
 - **Conta ElevenLabs** (opcional, só para o caminho 2) — chave de API + `voice_id` de uma voz em português.
-- **Conta Pexels** (gratuita) — chave de API para busca de vídeo de fundo.
-- **yt-dlp** (opcional) — `pipx install yt-dlp`, usado por `npm run download:background-pack` para baixar um pack próprio de vídeos de fundo de uma playlist do YouTube.
+- **Conta Pexels** (gratuita) — chave de API para busca de vídeo de fundo. Só necessária com `BACKGROUND_SOURCE=pexels` (padrão).
+- **yt-dlp** (opcional) — `pipx install yt-dlp`, usado por `npm run download:background-pack` para baixar um pack próprio de vídeos de fundo de uma playlist do YouTube (fonte `BACKGROUND_SOURCE=local`).
 
 Referência completa de variáveis de ambiente em [`docs/environment.md`](docs/environment.md).
 

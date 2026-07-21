@@ -25,7 +25,8 @@ rodando outro comando CLI apontando para o `jobId`.
       ▼             ▼         ▼         ▼              ▼
   1. narração   2. legenda  3. vídeo   4. composição  5. enfileiramento
   (TtsProvider) (WhisperX)  de fundo   (ffmpeg)       (reviewQueue)
-                             (Pexels)
+                             (Pexels ou
+                              pack local)
                                │
                                ▼
                  storage/pending-review/<jobId>/
@@ -82,6 +83,15 @@ escolha deveria ser revisitada.
 só conhece o que precisa: `backgroundVideoProvider` não sabe que existe
 ffmpeg, `composeVideo` não sabe que existe Pexels.
 
+Isso vale para a fonte `pexels`. A fonte alternativa `local`
+(`BACKGROUND_SOURCE=local`) não baixa nada em tempo de execução do
+pipeline — ela consome um pack de vídeos **já baixado** (`download:background-pack`,
+via `yt-dlp`) e **já indexado** por cena (`index:background-pack`), e monta
+o vídeo de fundo localmente (`buildLocalBackgroundVideo`) sorteando e
+concatenando clipes do índice. O pipeline em si (`pipeline.ts`) só decide
+*qual* das duas estratégias rodar, com base em `deps.backgroundSource` —
+ver [modules.md](./modules.md#srcpipelinets).
+
 ### 5. Legenda com timestamp por palavra, não por frase
 
 O WhisperX é usado especificamente pelo forced alignment (wav2vec2), que dá
@@ -123,6 +133,13 @@ Qualquer exceção lançada por um provider/módulo é capturada por `runStage`,
 reembalada com contexto (`etapa` + `jobId`) e relançada — interrompendo
 **apenas aquele job**.
 
+O diagrama acima mostra o caminho `BACKGROUND_SOURCE=pexels` (padrão). Com
+`BACKGROUND_SOURCE=local`, os passos `findBackgroundVideo`/
+`downloadBackgroundVideo` são substituídos por uma única chamada a
+`buildLocalBackgroundVideo(packDir, indexPath, narrationDurationSeconds, ...)`,
+que lê o `index.json` local (sem chamada de rede) e monta o vídeo via
+ffmpeg diretamente.
+
 ## Stack técnica
 
 | Camada | Tecnologia | Onde |
@@ -130,7 +147,7 @@ reembalada com contexto (`etapa` + `jobId`) e relançada — interrompendo
 | Linguagem/runtime | TypeScript (ESM) rodando via `tsx`, Node.js | todo `src/` |
 | TTS | Piper (binário local) ou ElevenLabs (API REST) | `src/modules/tts/` |
 | Transcrição/alinhamento | WhisperX (Python, subprocess) | `scripts/transcribe.py` |
-| Vídeo de fundo | Pexels Video API | `src/modules/video/backgroundVideoProvider.ts` |
+| Vídeo de fundo | Pexels Video API (padrão) ou pack local baixado via `yt-dlp` e indexado por cena (ffmpeg scene detection) | `src/modules/video/backgroundVideoProvider.ts`, `backgroundPackIndexer.ts`, `localBackgroundProvider.ts` |
 | Composição de vídeo | ffmpeg via `fluent-ffmpeg` | `src/modules/video/composeVideo.ts` |
 | Legenda | SubRip (`.srt`) + Advanced SubStation Alpha (`.ass`) | `src/modules/captions/` |
 | Persistência | Filesystem (`storage/`), sem banco | `src/modules/review/reviewQueue.ts` |

@@ -12,12 +12,19 @@ score/tamanho. Evoluções possíveis: lista de subreddits configurável,
 dedupe entre execuções (hoje nada impede reprocessar a mesma história em
 duas execuções), ranking por outros critérios além de `score`.
 
-## Query do vídeo de fundo fixa
+## Query/fonte do vídeo de fundo não deriva do conteúdo da história
 
-`backgroundQuery` é sempre a string literal `"pessoa organizando"`, tanto no
-fluxo padrão quanto na regeneração — não deriva do conteúdo da história.
-Marcado como `TODO` diretamente no código
-(`src/scripts/run-pipeline.ts`, `src/scripts/regenerate-with-elevenlabs.ts`).
+`backgroundQuery` (fonte `pexels`) é configurável via `--background-query`/
+`BACKGROUND_QUERY`, mas continua **fixa para todo o lote** — não deriva do
+conteúdo de cada história, e como a busca no Pexels é determinística
+(sempre pega o primeiro resultado), rodar `generate --input <pasta>` com
+várias histórias de uma vez faz todas saírem com o mesmo vídeo de fundo.
+A fonte `local` (`BACKGROUND_SOURCE=local`, pack próprio indexado por cena)
+já resolve a repetição — cada história sorteia sua própria combinação de
+clipes — mas nenhuma das duas fontes escolhe o vídeo/clipe com base no
+*tema* da história. Marcado como `TODO` diretamente no código
+(`src/pipeline.ts`, `src/scripts/run-pipeline.ts`,
+`src/scripts/regenerate-with-elevenlabs.ts`).
 
 ## Publicação automática nas plataformas
 
@@ -55,14 +62,15 @@ Só `fetchStories` tem testes hoje (ver [testing.md](./testing.md)). Os
 demais módulos foram validados manualmente, sem regression test em CI —
 qualquer alteração futura em `piperProvider`, `elevenLabsProvider`,
 `quotaTracker`, `generateCaptions`, `buildHighlightedAss`,
-`backgroundVideoProvider`, `composeVideo`, `reviewQueue` ou `pipeline` não
-tem uma rede de segurança automatizada além do `tsc --noEmit`.
+`backgroundVideoProvider`, `backgroundPackIndexer`, `localBackgroundProvider`,
+`composeVideo`, `reviewQueue` ou `pipeline` não tem uma rede de segurança
+automatizada além do `tsc --noEmit`.
 
 ## Estado no Reddit sem `--input`
 
 Não existe hoje um caminho "sem client_id" funcional para buscar histórias
 reais no Reddit — o endpoint JSON público bloqueia tráfego automatizado com
 403 independente da origem. A flag `--input`
-(ver [cli.md](./cli.md#npm-run-generate----input-arquivojson)) é o caminho
-recomendado quando OAuth não é uma opção no momento (testes locais, sem app
-Reddit cadastrado ainda).
+(ver [cli.md](./cli.md#npm-run-generate----input-pasta---story-id-ou-arquivo---background-query-termo---background-source-pexelslocal))
+é o caminho recomendado quando OAuth não é uma opção no momento (testes
+locais, sem app Reddit cadastrado ainda).
