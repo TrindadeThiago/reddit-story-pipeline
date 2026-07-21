@@ -8,6 +8,7 @@ export const ENV = {
   ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY ?? "",
   ELEVENLABS_API_URL: process.env.ELEVENLABS_API_URL ?? "https://api.elevenlabs.io/v1",
   ELEVENLABS_VOICE_ID: process.env.ELEVENLABS_VOICE_ID ?? "",
+  ELEVENLABS_MODEL_ID: process.env.ELEVENLABS_MODEL_ID ?? "eleven_flash_v2_5",
   ELEVENLABS_MONTHLY_CHAR_LIMIT: process.env.ELEVENLABS_MONTHLY_CHAR_LIMIT ?? "10000",
   PIPER_MODEL_PATH: process.env.PIPER_MODEL_PATH ?? "",
 

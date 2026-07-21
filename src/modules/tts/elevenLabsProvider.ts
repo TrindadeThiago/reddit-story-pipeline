@@ -15,7 +15,8 @@ export class ElevenLabsProvider implements TtsProvider {
     private readonly apiKey: string,
     private readonly voiceId: string,
     private readonly quota: QuotaTracker,
-    private readonly apiUrl: string
+    private readonly apiUrl: string,
+    private readonly modelId: string
   ) {}
 
   async synthesize(text: string, outputPath: string): Promise<NarrationResult> {
@@ -31,7 +32,7 @@ export class ElevenLabsProvider implements TtsProvider {
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_flash_v2_5", // suporta pt-BR
+          model_id: this.modelId,
         }),
       }
     );

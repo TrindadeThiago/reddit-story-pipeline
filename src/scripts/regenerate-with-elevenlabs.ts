@@ -49,6 +49,7 @@ async function main() {
   const elevenLabsApiKey = requireEnv("ELEVENLABS_API_KEY");
   const elevenLabsVoiceId = requireEnv("ELEVENLABS_VOICE_ID");
   const elevenLabsApiUrl = ENV.ELEVENLABS_API_URL;
+  const elevenLabsModelId = ENV.ELEVENLABS_MODEL_ID;
 
   const previousJob = await readPendingJob(jobId);
 
@@ -60,7 +61,8 @@ async function main() {
     elevenLabsApiKey,
     elevenLabsVoiceId,
     quota,
-    elevenLabsApiUrl
+    elevenLabsApiUrl,
+    elevenLabsModelId
   );
 
   const newJob = await runPipelineForStory(previousJob.story, {
