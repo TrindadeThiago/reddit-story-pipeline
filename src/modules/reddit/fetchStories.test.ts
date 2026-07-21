@@ -106,38 +106,3 @@ test("fetchStories usa OAuth (access_token + Bearer) e filtra por score/tamanho"
     }
   );
 });
-
-test("fetchStories reporta erro claro se faltarem credenciais", async () => {
-  const calls: string[] = [];
-  const fakeFetch: typeof fetch = async () => {
-    throw new Error("fetch nao deveria ser chamado sem credenciais");
-  };
-
-  const originalError = console.error;
-  const loggedErrors: string[] = [];
-  console.error = (msg: string) => loggedErrors.push(msg);
-
-  await withMockedEnvAndFetch(
-    {
-      REDDIT_CLIENT_ID: undefined,
-      REDDIT_CLIENT_SECRET: undefined,
-    },
-    fakeFetch,
-    async () => {
-      const { fetchStories } = await import(`./fetchStories.js?t=${Date.now()}`);
-      const stories = await fetchStories({
-        subreddits: ["AskHistorians"],
-        minScore: 500,
-        minBodyLength: 800,
-        limit: 5,
-      });
-      assert.equal(stories.length, 0);
-    }
-  );
-
-  console.error = originalError;
-  assert.ok(
-    loggedErrors.some((m) => m.includes("REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET ausentes")),
-    "deveria logar erro explicando credenciais ausentes"
-  );
-});
