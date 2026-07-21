@@ -29,6 +29,22 @@ export interface ComposedVideo {
   videoFilePath: string; // MP4 vertical 1080x1920, pronto para revisao
 }
 
+export interface BackgroundClip {
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export interface BackgroundPackFileIndex {
+  fileName: string;
+  durationSeconds: number;
+  clips: BackgroundClip[];
+}
+
+export interface BackgroundPackIndex {
+  generatedAt: string;
+  files: BackgroundPackFileIndex[];
+}
+
 export type ReviewDecision = "publish" | "regenerate_elevenlabs" | "discard";
 
 export interface PipelineJob {

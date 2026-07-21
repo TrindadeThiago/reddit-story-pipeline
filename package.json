@@ -6,6 +6,7 @@
   "scripts": {
     "generate": "tsx src/scripts/run-pipeline.ts",
     "download:background-pack": "tsx src/scripts/download-background-pack.ts",
+    "index:background-pack": "tsx src/scripts/index-background-pack.ts",
     "regenerate:elevenlabs": "tsx src/scripts/regenerate-with-elevenlabs.ts",
     "publish": "tsx src/scripts/publish.ts",
     "discard": "tsx src/scripts/discard.ts",
