@@ -3,11 +3,12 @@ import { mkdir } from "node:fs/promises";
 import { ENV } from "../config/index.js";
 
 /**
- * Uso: npm run download:background-pack -- [--url <playlist>] [--output <pasta>]
+ * Uso: npm run download:background-pack -- [--url <playlist>] [--output <pasta>] [--limit <n>]
  * Baixa (via yt-dlp) a playlist do YouTube com o pack de videos de fundo,
  * um arquivo mp4 por video, para uso posterior no indexador de cenas.
  * --url (ou env BACKGROUND_PACK_PLAYLIST_URL): URL da playlist.
  * --output (ou env BACKGROUND_PACK_DIR): pasta onde salvar os videos.
+ * --limit: baixa so os primeiros N videos da playlist (util para testar antes de baixar tudo).
  */
 function getFlag(name: string): string | undefined {
   const args = process.argv.slice(2);
@@ -50,6 +51,7 @@ function runYtDlp(args: string[]): Promise<void> {
 async function main() {
   const playlistUrl = getFlag("--url") ?? ENV.BACKGROUND_PACK_PLAYLIST_URL;
   const outputDir = getFlag("--output") ?? ENV.BACKGROUND_PACK_DIR;
+  const limitFlag = getFlag("--limit");
 
   if (!playlistUrl) {
     console.error(
@@ -58,12 +60,24 @@ async function main() {
     process.exit(1);
   }
 
+  let limit: number | undefined;
+  if (limitFlag !== undefined) {
+    limit = Number.parseInt(limitFlag, 10);
+    if (!Number.isInteger(limit) || limit <= 0) {
+      console.error(`--limit deve ser um numero inteiro positivo, recebido: ${limitFlag}`);
+      process.exit(1);
+    }
+  }
+
   await mkdir(outputDir, { recursive: true });
 
-  console.log(`Baixando playlist em ${outputDir} ...`);
+  console.log(
+    `Baixando playlist em ${outputDir}${limit ? ` (limitado aos primeiros ${limit} videos)` : ""} ...`
+  );
   await runYtDlp([
     "-f",
     "bv*[ext=mp4]+ba[ext=m4a]/mp4",
+    ...(limit ? ["--playlist-items", `1-${limit}`] : []),
     "-o",
     `${outputDir}/%(playlist_index)s - %(title)s.%(ext)s`,
     playlistUrl,
