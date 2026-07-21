@@ -17,7 +17,7 @@ export class ElevenLabsProvider implements TtsProvider {
     private readonly quota: QuotaTracker,
     private readonly apiUrl: string,
     private readonly modelId: string
-  ) {}
+  ) { }
 
   async synthesize(text: string, outputPath: string): Promise<NarrationResult> {
     await this.quota.assertHasBudget(text.length); // lanca erro se for estourar a cota do mes
@@ -33,6 +33,9 @@ export class ElevenLabsProvider implements TtsProvider {
         body: JSON.stringify({
           text,
           model_id: this.modelId,
+          voice_settings: {
+            speed: 1.2
+          }
         }),
       }
     );
