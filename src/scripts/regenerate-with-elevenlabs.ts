@@ -28,12 +28,27 @@ function getBackgroundQueryFlag(): string | undefined {
   return value;
 }
 
+function getBackgroundSourceFlag(): string | undefined {
+  const args = process.argv.slice(2);
+  const flagIndex = args.indexOf("--background-source");
+  if (flagIndex === -1) {
+    return undefined;
+  }
+  const value = args[flagIndex + 1];
+  if (!value) {
+    console.error("Uso: npm run regenerate:elevenlabs -- <jobId> --background-source <pexels|local>");
+    process.exit(1);
+  }
+  return value;
+}
+
 /**
  * Uso: npm run regenerate:elevenlabs -- <jobId> --background-query "termo de busca"
  * Caminho 2 da revisao: "aprovado, mas a voz do Piper ficou fraca".
  * Reroda o pipeline inteiro (narracao -> legenda -> video) so trocando
  * o provider de TTS, e cria um NOVO job para revisao rapida.
  * --background-query (ou env BACKGROUND_QUERY): termo usado na busca do video de fundo no Pexels.
+ * --background-source (ou env BACKGROUND_SOURCE): "pexels" (padrao) ou "local".
  */
 async function main() {
   const jobId = process.argv[2];
@@ -42,10 +57,7 @@ async function main() {
     process.exit(1);
   }
 
-  const backgroundQuery = getBackgroundQueryFlag() ?? ENV.BACKGROUND_QUERY;
-
-  const pexelsApiKey = requireEnv("PEXELS_API_KEY");
-  const pexelsApiUrl = ENV.PEXELS_API_URL;
+  const backgroundSource = getBackgroundSourceFlag() ?? ENV.BACKGROUND_SOURCE;
   const elevenLabsApiKey = requireEnv("ELEVENLABS_API_KEY");
   const elevenLabsVoiceId = requireEnv("ELEVENLABS_VOICE_ID");
   const elevenLabsApiUrl = ENV.ELEVENLABS_API_URL;
@@ -65,12 +77,24 @@ async function main() {
     elevenLabsModelId
   );
 
+  const backgroundDeps =
+    backgroundSource === "local"
+      ? {
+          backgroundSource: "local" as const,
+          backgroundPackDir: ENV.BACKGROUND_PACK_DIR,
+          backgroundPackIndexPath: ENV.BACKGROUND_PACK_INDEX_PATH,
+        }
+      : {
+          backgroundSource: "pexels" as const,
+          pexelsApiKey: requireEnv("PEXELS_API_KEY"),
+          pexelsApiUrl: ENV.PEXELS_API_URL,
+          backgroundQuery: getBackgroundQueryFlag() ?? ENV.BACKGROUND_QUERY,
+        };
+
   const newJob = await runPipelineForStory(previousJob.story, {
     ttsProvider: elevenLabs,
-    pexelsApiKey,
-    pexelsApiUrl,
     whisperModelSize: ENV.WHISPER_MODEL_SIZE,
-    backgroundQuery,
+    ...backgroundDeps,
   });
 
   console.log(`Novo job (ElevenLabs) pronto para revisao rapida: ${newJob.jobId}`);

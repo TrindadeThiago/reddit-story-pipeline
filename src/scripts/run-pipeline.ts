@@ -23,6 +23,8 @@ function requireEnv<K extends keyof typeof ENV>(name: K): string {
  * --story: filtra uma unica historia dentro da pasta de --input, pelo campo "id" ou pelo
  * nome do arquivo (com ou sem .json). Sem essa flag, todas as historias da pasta sao geradas.
  * --background-query (ou env BACKGROUND_QUERY): termo usado na busca do video de fundo no Pexels.
+ * --background-source (ou env BACKGROUND_SOURCE): "pexels" (padrao) ou "local" (usa o pack
+ * indexado por index:background-pack em vez de buscar no Pexels).
  */
 async function loadStoriesFromDirectory(
   dirPath: string,
@@ -110,14 +112,26 @@ function getBackgroundQueryFlag(): string | undefined {
   return value;
 }
 
+function getBackgroundSourceFlag(): string | undefined {
+  const args = process.argv.slice(2);
+  const flagIndex = args.indexOf("--background-source");
+  if (flagIndex === -1) {
+    return undefined;
+  }
+  const value = args[flagIndex + 1];
+  if (!value) {
+    console.error("Uso: npm run generate -- --background-source <pexels|local>");
+    process.exit(1);
+  }
+  return value;
+}
+
 async function main() {
   const piperModelPath = requireEnv("PIPER_MODEL_PATH");
-  const pexelsApiKey = requireEnv("PEXELS_API_KEY");
-  const pexelsApiUrl = ENV.PEXELS_API_URL;
+  const backgroundSource = getBackgroundSourceFlag() ?? ENV.BACKGROUND_SOURCE;
 
   const inputFile = getInputFlag();
   const storyFilter = getStoryFlag();
-  const backgroundQuery = getBackgroundQueryFlag() ?? ENV.BACKGROUND_QUERY;
 
   const stories = inputFile
     ? await loadStoriesFromDirectory(inputFile, storyFilter)
@@ -130,15 +144,27 @@ async function main() {
 
   const piper = new PiperProvider(piperModelPath);
 
+  const backgroundDeps =
+    backgroundSource === "local"
+      ? {
+          backgroundSource: "local" as const,
+          backgroundPackDir: ENV.BACKGROUND_PACK_DIR,
+          backgroundPackIndexPath: ENV.BACKGROUND_PACK_INDEX_PATH,
+        }
+      : {
+          backgroundSource: "pexels" as const,
+          pexelsApiKey: requireEnv("PEXELS_API_KEY"),
+          pexelsApiUrl: ENV.PEXELS_API_URL,
+          backgroundQuery: getBackgroundQueryFlag() ?? ENV.BACKGROUND_QUERY,
+        };
+
   console.log(`Encontradas ${stories.length} historias. Gerando com Piper...`);
 
   for (const story of stories) {
     const job = await runPipelineForStory(story, {
       ttsProvider: piper,
-      pexelsApiKey,
-      pexelsApiUrl,
       whisperModelSize: ENV.WHISPER_MODEL_SIZE,
-      backgroundQuery,
+      ...backgroundDeps,
     });
     console.log(`Job pronto para revisao: ${job.jobId}`);
   }

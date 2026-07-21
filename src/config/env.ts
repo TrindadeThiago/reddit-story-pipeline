@@ -16,8 +16,11 @@ export const ENV = {
   PEXELS_API_URL: process.env.PEXELS_API_URL ?? "https://api.pexels.com",
   BACKGROUND_QUERY: process.env.BACKGROUND_QUERY ?? "pessoa organizando",
 
+  BACKGROUND_SOURCE: process.env.BACKGROUND_SOURCE ?? "pexels", // "pexels" ou "local"
   BACKGROUND_PACK_PLAYLIST_URL: process.env.BACKGROUND_PACK_PLAYLIST_URL ?? "",
   BACKGROUND_PACK_DIR: process.env.BACKGROUND_PACK_DIR ?? "storage/background-pack",
+  BACKGROUND_PACK_INDEX_PATH:
+    process.env.BACKGROUND_PACK_INDEX_PATH ?? "storage/background-pack/index.json",
 
   WHISPER_MODEL_SIZE: process.env.WHISPER_MODEL_SIZE ?? "base",
   WHISPERX_PYTHON_BIN: process.env.WHISPERX_PYTHON_BIN ?? "",

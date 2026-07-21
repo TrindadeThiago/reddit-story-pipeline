@@ -3,16 +3,26 @@ import { mkdir, writeFile } from "node:fs/promises";
 import type { PipelineJob, RedditStory } from "./types.js";
 import type { TtsProvider } from "./modules/tts/index.js";
 import { generateCaptions } from "./modules/captions/index.js";
-import { findBackgroundVideo, composeVideo } from "./modules/video/index.js";
+import { buildLocalBackgroundVideo, findBackgroundVideo, composeVideo } from "./modules/video/index.js";
 import { enqueueForReview } from "./modules/review/index.js";
 
-interface RunPipelineDeps {
+type BackgroundSourceDeps =
+  | {
+      backgroundSource: "local";
+      backgroundPackDir: string;
+      backgroundPackIndexPath: string;
+    }
+  | {
+      backgroundSource: "pexels";
+      pexelsApiKey: string;
+      pexelsApiUrl: string;
+      backgroundQuery: string; // ex: "pessoa organizando mesa" -- video de "distracao"
+    };
+
+type RunPipelineDeps = {
   ttsProvider: TtsProvider; // Piper por padrao; ElevenLabs no caminho de regeneracao
-  pexelsApiKey: string;
-  pexelsApiUrl: string;
   whisperModelSize: string;
-  backgroundQuery: string; // ex: "pessoa organizando mesa" -- video de "distracao"
-}
+} & BackgroundSourceDeps;
 
 async function runStage<T>(stage: string, jobId: string, fn: () => Promise<T>): Promise<T> {
   try {
@@ -70,6 +80,18 @@ export async function runPipelineForStory(
 
   const backgroundVideoLocalPath = join(workDir, "background.mp4");
   await runStage("vídeo de fundo", jobId, async () => {
+    if (deps.backgroundSource === "local") {
+      const lastWord = job.captions!.words.at(-1);
+      const narrationDurationSeconds = lastWord?.endSeconds ?? 0;
+      await buildLocalBackgroundVideo(
+        deps.backgroundPackDir,
+        deps.backgroundPackIndexPath,
+        narrationDurationSeconds,
+        backgroundVideoLocalPath
+      );
+      return;
+    }
+
     const background = await findBackgroundVideo(
       deps.backgroundQuery,
       deps.pexelsApiKey,

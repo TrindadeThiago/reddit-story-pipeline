@@ -49,6 +49,8 @@ npm run publish -- <jobId>                # caminho 1
 npm run regenerate:elevenlabs -- <jobId>  # caminho 2
 npm run discard -- <jobId>                # caminho 3
 npm run download:background-pack -- --url <playlist>   # baixa pack proprio de videos de fundo (yt-dlp)
+npm run index:background-pack                          # indexa cortes de cena do pack baixado
+npm run generate -- --background-source local           # usa o pack local em vez do Pexels
 npm test
 ```
 
