@@ -4,6 +4,10 @@ import type { CaptionWord } from "../../types.js";
 const WORDS_PER_LINE = 4;
 const HIGHLIGHT_COLOR = "&H00D7FF&"; // ASS usa BGR: amarelo/laranja vibrante
 const BASE_COLOR = "&HFFFFFF&"; // branco
+// Alignment 8 = ancora no topo-centro; MarginV e a distancia do topo do frame
+// ate essa ancora. PlayResY e 1920, entao 1060 fica um pouco abaixo do centro (960).
+const ALIGNMENT = 8;
+const MARGIN_V = 1060;
 
 function formatAssTimestamp(seconds: number): string {
   const totalCentis = Math.round(seconds * 100);
@@ -41,7 +45,7 @@ WrapStyle: 0
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Default,Arial,90,${BASE_COLOR},${BASE_COLOR},&H000000&,&H00000000&,1,0,0,0,100,100,0,0,1,6,0,2,80,80,220,1
+Style: Default,Arial,90,${BASE_COLOR},${BASE_COLOR},&H000000&,&H00000000&,1,0,0,0,100,100,0,0,1,6,0,${ALIGNMENT},80,80,${MARGIN_V},1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
