@@ -1,4 +1,4 @@
-import { moveToApproved, moveToPublished } from "../modules/review/reviewQueue.js";
+import { moveToApproved, moveToPublished } from "../modules/review/index.js";
 
 /**
  * Uso: npm run publish -- <jobId>

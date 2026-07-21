@@ -1,4 +1,4 @@
-import { moveToDiscarded } from "../modules/review/reviewQueue.js";
+import { moveToDiscarded } from "../modules/review/index.js";
 
 /**
  * Uso: npm run discard -- <jobId>

@@ -1,3 +1,4 @@
+import { ENV } from "../../config/index.js";
 import type { RedditStory } from "../../types.js";
 
 interface FetchStoriesOptions {
@@ -24,9 +25,9 @@ async function getAccessToken(): Promise<string> {
     return tokenCache.token;
   }
 
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const userAgent = process.env.REDDIT_USER_AGENT ?? "reddit-story-pipeline/0.1";
+  const clientId = ENV.REDDIT_CLIENT_ID;
+  const clientSecret = ENV.REDDIT_CLIENT_SECRET;
+  const userAgent = ENV.REDDIT_USER_AGENT;
 
   if (!clientId || !clientSecret) {
     throw new Error(
@@ -67,7 +68,7 @@ export async function fetchStories(
   options: FetchStoriesOptions
 ): Promise<RedditStory[]> {
   const results: RedditStory[] = [];
-  const userAgent = process.env.REDDIT_USER_AGENT ?? "reddit-story-pipeline/0.1";
+  const userAgent = ENV.REDDIT_USER_AGENT;
 
   let accessToken: string;
   try {

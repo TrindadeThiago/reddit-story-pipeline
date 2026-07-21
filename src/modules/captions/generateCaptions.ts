@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import { ENV } from "../../config/index.js";
 import type { CaptionResult, CaptionWord } from "../../types.js";
 import { buildHighlightedAss } from "./buildHighlightedAss.js";
 
@@ -13,8 +14,8 @@ const execFileAsync = promisify(execFile);
 const DEFAULT_VENV_PYTHON = ".venv-whisperx/bin/python3";
 
 function resolvePythonBin(): string {
-  if (process.env.WHISPERX_PYTHON_BIN) {
-    return process.env.WHISPERX_PYTHON_BIN;
+  if (ENV.WHISPERX_PYTHON_BIN) {
+    return ENV.WHISPERX_PYTHON_BIN;
   }
   return existsSync(DEFAULT_VENV_PYTHON) ? DEFAULT_VENV_PYTHON : "python3";
 }

@@ -1,11 +1,10 @@
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
 import type { PipelineJob, RedditStory } from "./types.js";
-import type { TtsProvider } from "./modules/tts/ttsProvider.js";
-import { generateCaptions } from "./modules/captions/generateCaptions.js";
-import { findBackgroundVideo } from "./modules/video/backgroundVideoProvider.js";
-import { composeVideo } from "./modules/video/composeVideo.js";
-import { enqueueForReview } from "./modules/review/reviewQueue.js";
+import type { TtsProvider } from "./modules/tts/index.js";
+import { generateCaptions } from "./modules/captions/index.js";
+import { findBackgroundVideo, composeVideo } from "./modules/video/index.js";
+import { enqueueForReview } from "./modules/review/index.js";
 
 interface RunPipelineDeps {
   ttsProvider: TtsProvider; // Piper por padrao; ElevenLabs no caminho de regeneracao
