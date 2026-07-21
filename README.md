@@ -41,7 +41,8 @@ cp .env.example .env   # preencher com suas chaves/paths
 
 ```bash
 npm run generate                                                  # busca historias no Reddit e gera com Piper
-npm run generate -- --input storage/manual-stories/exemplo.json   # usa historias manuais (sem depender do Reddit)
+npm run generate -- --input storage/manual-stories                        # usa historias manuais (1 arquivo .json por historia, sem depender do Reddit)
+npm run generate -- --input storage/manual-stories --story manual-0002    # usa apenas a historia com esse id (ou nome de arquivo)
 # ... revisar os videos em storage/pending-review ...
 npm run publish -- <jobId>                # caminho 1
 npm run regenerate:elevenlabs -- <jobId>  # caminho 2

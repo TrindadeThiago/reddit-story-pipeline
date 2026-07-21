@@ -15,6 +15,7 @@ storage/pending-review/*
 storage/discarded/*
 storage/approved/*
 storage/published/*
+storage/manual-stories/*
 storage/elevenlabs-quota.json
 !storage/**/.gitkeep
 
