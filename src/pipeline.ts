@@ -9,6 +9,7 @@ import { enqueueForReview } from "./modules/review/index.js";
 interface RunPipelineDeps {
   ttsProvider: TtsProvider; // Piper por padrao; ElevenLabs no caminho de regeneracao
   pexelsApiKey: string;
+  pexelsApiUrl: string;
   whisperModelSize: string;
   backgroundQuery: string; // ex: "pessoa organizando mesa" -- video de "distracao"
 }
@@ -69,7 +70,11 @@ export async function runPipelineForStory(
 
   const backgroundVideoLocalPath = join(workDir, "background.mp4");
   await runStage("vídeo de fundo", jobId, async () => {
-    const background = await findBackgroundVideo(deps.backgroundQuery, deps.pexelsApiKey);
+    const background = await findBackgroundVideo(
+      deps.backgroundQuery,
+      deps.pexelsApiKey,
+      deps.pexelsApiUrl
+    );
     await downloadBackgroundVideo(background.downloadUrl, backgroundVideoLocalPath);
   });
 

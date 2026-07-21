@@ -14,14 +14,15 @@ export class ElevenLabsProvider implements TtsProvider {
   constructor(
     private readonly apiKey: string,
     private readonly voiceId: string,
-    private readonly quota: QuotaTracker
+    private readonly quota: QuotaTracker,
+    private readonly apiUrl: string
   ) {}
 
   async synthesize(text: string, outputPath: string): Promise<NarrationResult> {
     await this.quota.assertHasBudget(text.length); // lanca erro se for estourar a cota do mes
 
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`,
+      `${this.apiUrl}/text-to-speech/${this.voiceId}`,
       {
         method: "POST",
         headers: {

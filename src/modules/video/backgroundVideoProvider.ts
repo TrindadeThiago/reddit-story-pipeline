@@ -4,12 +4,13 @@
  */
 export async function findBackgroundVideo(
   query: string,
-  pexelsApiKey: string
+  pexelsApiKey: string,
+  apiUrl: string
 ): Promise<{ downloadUrl: string; durationSeconds: number }> {
   const res = await fetch(
-    `https://api.pexels.com/videos/search?query=${encodeURIComponent(
+    `${apiUrl}/videos/search?query=${encodeURIComponent(
       query
-    )}&orientation=portrait&per_page=5`,
+    )}&orientation=portrait&per_page=5&min_duration=60`,
     { headers: { Authorization: pexelsApiKey } }
   );
   const json = await res.json();
