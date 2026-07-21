@@ -30,7 +30,7 @@ export class ElevenLabsProvider implements TtsProvider {
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_multilingual_v2", // suporta pt-BR
+          model_id: "eleven_flash_v2_5", // suporta pt-BR
         }),
       }
     );
