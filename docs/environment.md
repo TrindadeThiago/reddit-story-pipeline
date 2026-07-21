@@ -30,6 +30,16 @@ total insuficiente com `--model base`, processo morto pelo OOM killer), use
 Isso não é uma limitação de implementação — é custo de recurso do modelo em
 si.
 
+### Nota sobre qual `python3` é usado
+
+`generateCaptions` roda `scripts/transcribe.py` com o interpretador indicado
+em `WHISPERX_PYTHON_BIN`; se essa variável não estiver definida, usa
+`.venv-whisperx/bin/python3` quando esse arquivo existe, e só cai para o
+`python3` do PATH global caso contrário. Isso evita o erro comum
+`ModuleNotFoundError: No module named 'whisperx'` quando o WhisperX foi
+instalado só no venv isolado (recomendado acima) mas o `python3` do PATH
+aponta para outro interpretador (ex: Anaconda) sem o pacote.
+
 ### Nota sobre o Reddit sem `--input`
 
 O endpoint JSON público (`reddit.com/r/x/top.json`, sem autenticação) é
@@ -54,6 +64,7 @@ Referência completa (ver também [`.env.example`](../.env.example)):
 | `PIPER_MODEL_PATH` | `generate` e `regenerate:elevenlabs` | Caminho do `.onnx` do modelo Piper | — |
 | `PEXELS_API_KEY` | `generate` e `regenerate:elevenlabs` | Chave de API do Pexels | — |
 | `WHISPER_MODEL_SIZE` | Opcional | Tamanho do modelo WhisperX (`tiny`/`base`/`small`/...) | `base` |
+| `WHISPERX_PYTHON_BIN` | Opcional | Caminho do interpretador Python com WhisperX instalado | `.venv-whisperx/bin/python3` se existir, senão `python3` do PATH |
 
 Variáveis marcadas como obrigatórias fazem os scripts abortarem com
 `process.exit(1)` e mensagem clara (`requireEnv`) se ausentes — não há

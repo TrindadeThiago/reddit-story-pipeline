@@ -138,7 +138,7 @@ nunca no fluxo padrão, que usa Piper.
 
 ### `generateCaptions(audioFilePath, outputSrtPath, modelSize): Promise<CaptionResult>`
 
-1. `execFile("python3", ["scripts/transcribe.py", "--audio", ..., "--model", modelSize, "--out-srt", outputSrtPath, "--out-json", `${outputSrtPath}.words.json`])`.
+1. `execFile(resolvePythonBin(), ["scripts/transcribe.py", "--audio", ..., "--model", modelSize, "--out-srt", outputSrtPath, "--out-json", `${outputSrtPath}.words.json`])`. `resolvePythonBin()` usa `WHISPERX_PYTHON_BIN` se definida, senão `.venv-whisperx/bin/python3` se existir, senão `python3` do PATH — ver [environment.md](./environment.md#nota-sobre-qual-python3-é-usado).
 2. Lê `${outputSrtPath}.words.json` (array de `CaptionWord`).
 3. `buildHighlightedAss(words, outputSrtPath.replace(/\.srt$/, ".ass"))`.
 4. Devolve `{ words, srtFilePath: outputSrtPath, assFilePath }`.
