@@ -9,13 +9,18 @@ import type { NarrationResult } from "../../types.js";
 export class PiperProvider implements TtsProvider {
   readonly name = "piper" as const;
 
-  constructor(private readonly modelPath: string) {}
+  constructor(
+    private readonly modelPath: string,
+    private readonly lengthScale: string
+  ) {}
 
   async synthesize(text: string, outputPath: string): Promise<NarrationResult> {
     await new Promise<void>((resolve, reject) => {
       const child = spawn("piper", [
         "--model",
         this.modelPath,
+        "--length_scale",
+        this.lengthScale,
         "--output_file",
         outputPath,
       ]);

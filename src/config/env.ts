@@ -11,6 +11,7 @@ export const ENV = {
   ELEVENLABS_MODEL_ID: process.env.ELEVENLABS_MODEL_ID ?? "eleven_flash_v2_5",
   ELEVENLABS_MONTHLY_CHAR_LIMIT: process.env.ELEVENLABS_MONTHLY_CHAR_LIMIT ?? "10000",
   PIPER_MODEL_PATH: process.env.PIPER_MODEL_PATH ?? "",
+  PIPER_LENGTH_SCALE: process.env.PIPER_LENGTH_SCALE ?? "0.85", // <1 = mais rapido, >1 = mais lento
 
   PEXELS_API_KEY: process.env.PEXELS_API_KEY ?? "",
   PEXELS_API_URL: process.env.PEXELS_API_URL ?? "https://api.pexels.com",

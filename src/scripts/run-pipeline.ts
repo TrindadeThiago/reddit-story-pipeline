@@ -142,7 +142,7 @@ async function main() {
         limit: 5,
       });
 
-  const piper = new PiperProvider(piperModelPath);
+  const piper = new PiperProvider(piperModelPath, ENV.PIPER_LENGTH_SCALE);
 
   const backgroundDeps =
     backgroundSource === "local"
