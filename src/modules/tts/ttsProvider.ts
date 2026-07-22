@@ -7,5 +7,6 @@ import type { NarrationResult } from "../../types.js";
  */
 export interface TtsProvider {
   readonly name: NarrationResult["provider"];
+  readonly fileExtension: string; // ex: "wav" (Piper), "mp3" (ElevenLabs) -- sem ponto
   synthesize(text: string, outputPath: string): Promise<NarrationResult>;
 }

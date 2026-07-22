@@ -13,6 +13,9 @@ export async function findBackgroundVideo(
     )}&orientation=portrait&per_page=5&min_duration=60`,
     { headers: { Authorization: pexelsApiKey } }
   );
+  if (!res.ok) {
+    throw new Error(`Busca de video na Pexels falhou: HTTP ${res.status} ${res.statusText}`);
+  }
   const json = await res.json();
 
   const video = json.videos?.[0];

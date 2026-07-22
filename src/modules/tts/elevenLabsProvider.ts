@@ -10,6 +10,7 @@ import { QuotaTracker } from "./quotaTracker.js";
  */
 export class ElevenLabsProvider implements TtsProvider {
   readonly name = "elevenlabs" as const;
+  readonly fileExtension = "mp3";
 
   constructor(
     private readonly apiKey: string,
