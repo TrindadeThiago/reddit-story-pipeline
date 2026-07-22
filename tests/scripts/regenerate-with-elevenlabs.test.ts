@@ -19,7 +19,13 @@ class FakeElevenLabsProvider {
 class FakeQuotaTracker {}
 
 const ElevenLabsProviderCtor = vi.fn((...args: unknown[]) => new FakeElevenLabsProvider(args[0] as string, args[1] as string));
-const QuotaTrackerCtor = vi.fn((..._args: unknown[]) => new FakeQuotaTracker());
+const QuotaTrackerCtor = vi.fn((...args: unknown[]) => {
+  const monthlyLimit = args[1] as number;
+  if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0) {
+    throw new Error(`Limite mensal de cota invalido: ${monthlyLimit}.`);
+  }
+  return new FakeQuotaTracker();
+});
 
 vi.mock("../../src/modules/tts/index.js", () => ({
   ElevenLabsProvider: function (this: unknown, ...args: unknown[]) {
@@ -154,6 +160,31 @@ describe("scripts/regenerate-with-elevenlabs", () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
+    expect(runPipelineForStory).not.toHaveBeenCalled();
+  });
+
+  it("termina com exit code 1 e nao chama o ElevenLabs quando o limite de cota e invalido", async () => {
+    process.env.ELEVENLABS_MONTHLY_CHAR_LIMIT = "nao-e-um-numero";
+    process.argv = ["node", "regenerate-with-elevenlabs.js", "job-abc"];
+    const exitSpy = mockProcessExit();
+
+    await importScriptAndWait("../../src/scripts/regenerate-with-elevenlabs.js", () => {
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    expect(ElevenLabsProviderCtor).not.toHaveBeenCalled();
+    expect(runPipelineForStory).not.toHaveBeenCalled();
+  });
+
+  it("termina com exit code 1 e nao le o job quando o jobId e malicioso", async () => {
+    process.argv = ["node", "regenerate-with-elevenlabs.js", "../../etc/passwd"];
+    const exitSpy = mockProcessExit();
+
+    await importScriptAndWait("../../src/scripts/regenerate-with-elevenlabs.js", () => {
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    expect(readPendingJob).not.toHaveBeenCalled();
     expect(runPipelineForStory).not.toHaveBeenCalled();
   });
 });

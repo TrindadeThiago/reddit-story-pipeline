@@ -2,6 +2,7 @@ import { ENV } from "../config/index.js";
 import { readPendingJob } from "../modules/review/index.js";
 import { ElevenLabsProvider, QuotaTracker } from "../modules/tts/index.js";
 import { runPipelineForStory } from "../pipeline.js";
+import { assertSafeId } from "../modules/shared/assertSafeId.js";
 
 function requireEnv<K extends keyof typeof ENV>(name: K): string {
   const value = ENV[name];
@@ -21,7 +22,7 @@ function getBackgroundQueryFlag(): string | undefined {
   const value = args[flagIndex + 1];
   if (!value) {
     console.error(
-      "Uso: npm run regenerate:elevenlabs -- <jobId> --background-query <termo de busca>"
+      "Uso: yarn regenerate:elevenlabs <jobId> --background-query <termo de busca>"
     );
     process.exit(1);
   }
@@ -36,14 +37,14 @@ function getBackgroundSourceFlag(): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error("Uso: npm run regenerate:elevenlabs -- <jobId> --background-source <pexels|local>");
+    console.error("Uso: yarn regenerate:elevenlabs <jobId> --background-source <pexels|local>");
     process.exit(1);
   }
   return value;
 }
 
 /**
- * Uso: npm run regenerate:elevenlabs -- <jobId> --background-query "termo de busca"
+ * Uso: yarn regenerate:elevenlabs <jobId> --background-query "termo de busca"
  * Caminho 2 da revisao: "aprovado, mas a voz do Piper ficou fraca".
  * Reroda o pipeline inteiro (narracao -> legenda -> video) so trocando
  * o provider de TTS, e cria um NOVO job para revisao rapida.
@@ -53,9 +54,11 @@ function getBackgroundSourceFlag(): string | undefined {
 async function main() {
   const jobId = process.argv[2];
   if (!jobId) {
-    console.error("Uso: npm run regenerate:elevenlabs -- <jobId>");
+    console.error("Uso: yarn regenerate:elevenlabs <jobId>");
     process.exit(1);
   }
+
+  assertSafeId(jobId, "jobId");
 
   const backgroundSource = getBackgroundSourceFlag() ?? ENV.BACKGROUND_SOURCE;
   const elevenLabsApiKey = requireEnv("ELEVENLABS_API_KEY");

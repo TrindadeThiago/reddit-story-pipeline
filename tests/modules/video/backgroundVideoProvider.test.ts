@@ -37,6 +37,18 @@ describe("findBackgroundVideo", () => {
     }
   });
 
+  it("lanca erro claro quando a resposta da Pexels nao e ok (ex: 401/429)", async () => {
+    const fetchStub = stubFetch(async () => new Response("erro", { status: 401, statusText: "Unauthorized" }));
+
+    try {
+      await expect(
+        findBackgroundVideo("qualquer coisa", "chave-invalida", "https://api.pexels.com")
+      ).rejects.toThrow(/Busca de video na Pexels falhou: HTTP 401/);
+    } finally {
+      fetchStub.restore();
+    }
+  });
+
   it("lanca erro quando nenhum video e encontrado para a query", async () => {
     const fetchStub = stubFetch(async () => jsonResponse({ videos: [] }));
 

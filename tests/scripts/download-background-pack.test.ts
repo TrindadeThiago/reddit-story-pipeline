@@ -73,6 +73,29 @@ describe("scripts/download-background-pack", () => {
     });
   });
 
+  it("prefixa a URL da playlist com -- para evitar argument injection", async () => {
+    await withTempDir(async (dir) => {
+      process.argv = [
+        "node",
+        "download-background-pack.js",
+        "--url",
+        "https://youtube.com/playlist?list=abc",
+        "--output",
+        dir,
+      ];
+
+      await importScriptAndWait("../../src/scripts/download-background-pack.js", () => {
+        expect(spawnCalls.length).toBe(1);
+      });
+
+      const args = spawnCalls[0].args;
+      const dashDashIndex = args.indexOf("--");
+      expect(dashDashIndex).toBeGreaterThanOrEqual(0);
+      expect(args[dashDashIndex + 1]).toBe("https://youtube.com/playlist?list=abc");
+      expect(args[args.length - 1]).toBe("https://youtube.com/playlist?list=abc");
+    });
+  });
+
   it("aplica --limit como --playlist-items 1-N", async () => {
     await withTempDir(async (dir) => {
       process.argv = [

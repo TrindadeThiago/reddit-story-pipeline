@@ -11,6 +11,20 @@ describe("ElevenLabsProvider", () => {
     vi.restoreAllMocks();
   });
 
+  it("declara fileExtension mp3", async () => {
+    await withTempDir(async (dir) => {
+      const quota = new QuotaTracker(join(dir, "quota.json"), 10000);
+      const provider = new ElevenLabsProvider(
+        "api-key",
+        "voice-1",
+        quota,
+        "https://api.elevenlabs.io/v1",
+        "eleven_multilingual_v2"
+      );
+      expect(provider.fileExtension).toBe("mp3");
+    });
+  });
+
   it("sintetiza com sucesso, grava o audio e registra o uso na cota", async () => {
     await withTempDir(async (dir) => {
       const quota = new QuotaTracker(join(dir, "quota.json"), 10000);

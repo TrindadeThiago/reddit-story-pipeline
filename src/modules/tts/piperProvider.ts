@@ -8,6 +8,7 @@ import type { NarrationResult } from "../../types.js";
  */
 export class PiperProvider implements TtsProvider {
   readonly name = "piper" as const;
+  readonly fileExtension = "wav"; // piper sempre gera WAV, independente da extensao do outputPath
 
   constructor(
     private readonly modelPath: string,

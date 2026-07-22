@@ -203,40 +203,30 @@ describe("fetchStories", () => {
     );
   });
 
-  it("loga a mensagem de erro (via String()) quando a autenticacao lanca algo que nao e um Error", async () => {
-    const originalError = console.error;
-    const loggedErrors: string[] = [];
-    console.error = (msg: string) => loggedErrors.push(msg);
+  it("lanca erro (via String()) quando a autenticacao lanca algo que nao e um Error", async () => {
+    await withMockedEnvAndFetch(
+      {
+        REDDIT_CLIENT_ID: "test-id",
+        REDDIT_CLIENT_SECRET: "test-secret",
+        REDDIT_USER_AGENT: "test-agent/1.0",
+      },
+      async () => {
+        throw "falha nao-Error na autenticacao";
+      },
+      async () => {
+        vi.resetModules();
+        const { fetchStories } = await import("../../../src/modules/reddit/fetchStories.js");
 
-    try {
-      await withMockedEnvAndFetch(
-        {
-          REDDIT_CLIENT_ID: "test-id",
-          REDDIT_CLIENT_SECRET: "test-secret",
-          REDDIT_USER_AGENT: "test-agent/1.0",
-        },
-        async () => {
-          throw "falha nao-Error na autenticacao";
-        },
-        async () => {
-          vi.resetModules();
-          const { fetchStories } = await import("../../../src/modules/reddit/fetchStories.js");
-          const stories = await fetchStories({
+        await expect(
+          fetchStories({
             subreddits: ["AskHistorians"],
             minScore: 0,
             minBodyLength: 0,
             limit: 5,
-          });
-          expect(stories.length).toBe(0);
-        }
-      );
-    } finally {
-      console.error = originalError;
-    }
-
-    expect(
-      loggedErrors.some((m) => m.includes("falha nao-Error na autenticacao"))
-    ).toBe(true);
+          })
+        ).rejects.toThrow(/falha nao-Error na autenticacao/);
+      }
+    );
   });
 
   it("loga a mensagem de erro (via String()) quando a busca por um subreddit lanca algo que nao e um Error", async () => {
@@ -278,44 +268,32 @@ describe("fetchStories", () => {
     ).toBe(true);
   });
 
-  it("retorna lista vazia e loga erro quando a autenticacao OAuth falha", async () => {
-    const originalError = console.error;
-    const loggedErrors: string[] = [];
-    console.error = (msg: string) => loggedErrors.push(msg);
+  it("lanca erro explicito (nao retorna lista vazia) quando a autenticacao OAuth falha", async () => {
+    await withMockedEnvAndFetch(
+      {
+        REDDIT_CLIENT_ID: "test-id",
+        REDDIT_CLIENT_SECRET: "test-secret",
+        REDDIT_USER_AGENT: "test-agent/1.0",
+      },
+      async (url) => {
+        if (url === "https://www.reddit.com/api/v1/access_token") {
+          return new Response("erro", { status: 401, statusText: "Unauthorized" });
+        }
+        throw new Error(`URL inesperada no teste: ${url}`);
+      },
+      async () => {
+        vi.resetModules();
+        const { fetchStories } = await import("../../../src/modules/reddit/fetchStories.js");
 
-    try {
-      await withMockedEnvAndFetch(
-        {
-          REDDIT_CLIENT_ID: "test-id",
-          REDDIT_CLIENT_SECRET: "test-secret",
-          REDDIT_USER_AGENT: "test-agent/1.0",
-        },
-        async (url) => {
-          if (url === "https://www.reddit.com/api/v1/access_token") {
-            return new Response("erro", { status: 401, statusText: "Unauthorized" });
-          }
-          throw new Error(`URL inesperada no teste: ${url}`);
-        },
-        async () => {
-          vi.resetModules();
-          const { fetchStories } = await import("../../../src/modules/reddit/fetchStories.js");
-
-          const stories = await fetchStories({
+        await expect(
+          fetchStories({
             subreddits: ["AskHistorians"],
             minScore: 0,
             minBodyLength: 0,
             limit: 5,
-          });
-
-          expect(stories.length).toBe(0);
-        }
-      );
-    } finally {
-      console.error = originalError;
-    }
-
-    expect(
-      loggedErrors.some((m) => m.includes("Falha ao autenticar no Reddit"))
-    ).toBe(true);
+          })
+        ).rejects.toThrow(/\[fetchStories\] Falha ao autenticar no Reddit/);
+      }
+    );
   });
 });

@@ -1,12 +1,25 @@
+import { Writable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubFetch } from "./helpers/mockFetch.js";
 
 const mkdir = vi.fn(async (_path: string, _opts?: unknown) => undefined);
-const writeFile = vi.fn(async (_path: string, _data: unknown) => undefined);
 
 vi.mock("node:fs/promises", () => ({
   mkdir: (path: string, opts?: unknown) => mkdir(path, opts),
-  writeFile: (path: string, data: unknown) => writeFile(path, data),
+}));
+
+const createWriteStream = vi.fn((_path: string) => {
+  const chunks: Buffer[] = [];
+  return new Writable({
+    write(chunk, _encoding, callback) {
+      chunks.push(chunk);
+      callback();
+    },
+  });
+});
+
+vi.mock("node:fs", () => ({
+  createWriteStream: (path: string) => createWriteStream(path),
 }));
 
 const generateCaptions = vi.fn(async (_audioPath: string, srtPath: string, _modelSize: string) => ({
@@ -20,20 +33,22 @@ vi.mock("../src/modules/captions/index.js", () => ({
     generateCaptions(audioPath, srtPath, modelSize),
 }));
 
-const buildLocalBackgroundVideo = vi.fn(async (_packDir: string, _indexPath: string, _duration: number, _out: string) => undefined);
+const selectLocalBackgroundClips = vi.fn(async (_indexPath: string, _duration: number) => [
+  { fileName: "a.mp4", startSeconds: 0, durationSeconds: 10 },
+]);
 const findBackgroundVideo = vi.fn(async (_query: string, _key: string, _url: string) => ({
   downloadUrl: "https://cdn.pexels.com/video.mp4",
   durationSeconds: 30,
 }));
-const composeVideo = vi.fn(async (options: { outputPath: string }) => ({
+const composeVideo = vi.fn(async (options: { outputPath: string; background: unknown }) => ({
   videoFilePath: options.outputPath,
 }));
 
 vi.mock("../src/modules/video/index.js", () => ({
-  buildLocalBackgroundVideo: (packDir: string, indexPath: string, duration: number, out: string) =>
-    buildLocalBackgroundVideo(packDir, indexPath, duration, out),
+  selectLocalBackgroundClips: (indexPath: string, duration: number) =>
+    selectLocalBackgroundClips(indexPath, duration),
   findBackgroundVideo: (query: string, key: string, url: string) => findBackgroundVideo(query, key, url),
-  composeVideo: (options: { outputPath: string }) => composeVideo(options),
+  composeVideo: (options: { outputPath: string; background: unknown }) => composeVideo(options),
 }));
 
 const enqueueForReview = vi.fn(async (_job: unknown) => "storage/pending-review/job-1");
@@ -47,6 +62,7 @@ const story = { id: "s1", subreddit: "AskHistorians", title: "t", body: "corpo d
 function fakeTtsProvider(name: "piper" | "elevenlabs" = "piper") {
   return {
     name,
+    fileExtension: name === "piper" ? "wav" : "mp3",
     synthesize: vi.fn(async (_text: string, outputPath: string) => ({
       provider: name,
       audioFilePath: outputPath,
@@ -58,9 +74,9 @@ function fakeTtsProvider(name: "piper" | "elevenlabs" = "piper") {
 describe("pipeline/runPipelineForStory", () => {
   beforeEach(() => {
     mkdir.mockClear();
-    writeFile.mockClear();
+    createWriteStream.mockClear();
     generateCaptions.mockClear();
-    buildLocalBackgroundVideo.mockClear();
+    selectLocalBackgroundClips.mockClear();
     findBackgroundVideo.mockClear();
     composeVideo.mockClear();
     enqueueForReview.mockClear();
@@ -84,9 +100,15 @@ describe("pipeline/runPipelineForStory", () => {
 
     expect(tts.synthesize).toHaveBeenCalledTimes(1);
     expect(generateCaptions).toHaveBeenCalledTimes(1);
-    expect(buildLocalBackgroundVideo).toHaveBeenCalledTimes(1);
+    expect(selectLocalBackgroundClips).toHaveBeenCalledTimes(1);
     expect(findBackgroundVideo).not.toHaveBeenCalled();
     expect(composeVideo).toHaveBeenCalledTimes(1);
+    const composeOptions = composeVideo.mock.calls[0][0] as { background: unknown };
+    expect(composeOptions.background).toEqual({
+      kind: "clips",
+      packDir: "storage/background-pack",
+      clips: [{ fileName: "a.mp4", startSeconds: 0, durationSeconds: 10 }],
+    });
     expect(enqueueForReview).toHaveBeenCalledTimes(1);
     expect(job.jobId).toContain(story.id);
     expect(job.narration?.provider).toBe("piper");
@@ -109,8 +131,10 @@ describe("pipeline/runPipelineForStory", () => {
       });
 
       expect(findBackgroundVideo).toHaveBeenCalledTimes(1);
-      expect(buildLocalBackgroundVideo).not.toHaveBeenCalled();
-      expect(writeFile).toHaveBeenCalled();
+      expect(selectLocalBackgroundClips).not.toHaveBeenCalled();
+      expect(createWriteStream).toHaveBeenCalled();
+      const composeOptions = composeVideo.mock.calls[0][0] as { background: { kind: string } };
+      expect(composeOptions.background.kind).toBe("single");
     } finally {
       fetchStub.restore();
     }
@@ -169,12 +193,29 @@ describe("pipeline/runPipelineForStory", () => {
       backgroundPackIndexPath: "storage/background-pack/index.json",
     });
 
-    expect(buildLocalBackgroundVideo).toHaveBeenCalledWith(
-      "storage/background-pack",
+    expect(selectLocalBackgroundClips).toHaveBeenCalledWith(
       "storage/background-pack/index.json",
-      0,
-      expect.any(String)
+      0
     );
+  });
+
+  it("rejeita story.id fora da whitelist antes de qualquer escrita em disco", async () => {
+    const { runPipelineForStory } = await import("../src/pipeline.js");
+    const tts = fakeTtsProvider();
+    const maliciousStory = { ...story, id: "../../tmp/evil" };
+
+    await expect(
+      runPipelineForStory(maliciousStory, {
+        ttsProvider: tts,
+        whisperModelSize: "base",
+        backgroundSource: "local",
+        backgroundPackDir: "storage/background-pack",
+        backgroundPackIndexPath: "storage/background-pack/index.json",
+      })
+    ).rejects.toThrow(/story\.id invalido/);
+
+    expect(mkdir).not.toHaveBeenCalled();
+    expect(tts.synthesize).not.toHaveBeenCalled();
   });
 
   it("propaga erro de download quando a resposta do Pexels nao e ok", async () => {
@@ -194,6 +235,28 @@ describe("pipeline/runPipelineForStory", () => {
           backgroundQuery: "pessoa organizando",
         })
       ).rejects.toThrow(/falha na etapa "vídeo de fundo"/);
+    } finally {
+      fetchStub.restore();
+    }
+  });
+
+  it("propaga erro de download quando a resposta do Pexels nao tem corpo", async () => {
+    const fetchStub = stubFetch(async () => new Response(null, { status: 200 }));
+
+    try {
+      const { runPipelineForStory } = await import("../src/pipeline.js");
+      const tts = fakeTtsProvider();
+
+      await expect(
+        runPipelineForStory(story, {
+          ttsProvider: tts,
+          whisperModelSize: "base",
+          backgroundSource: "pexels",
+          pexelsApiKey: "key",
+          pexelsApiUrl: "https://api.pexels.com",
+          backgroundQuery: "pessoa organizando",
+        })
+      ).rejects.toThrow(/resposta sem corpo/);
     } finally {
       fetchStub.restore();
     }

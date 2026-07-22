@@ -3,7 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { ENV } from "../config/index.js";
 
 /**
- * Uso: npm run download:background-pack -- [--url <playlist>] [--output <pasta>] [--limit <n>]
+ * Uso: yarn download:background-pack [--url <playlist>] [--output <pasta>] [--limit <n>]
  * Baixa (via yt-dlp) a playlist do YouTube com o pack de videos de fundo,
  * um arquivo mp4 por video, para uso posterior no indexador de cenas.
  * --url (ou env BACKGROUND_PACK_PLAYLIST_URL): URL da playlist.
@@ -18,7 +18,7 @@ function getFlag(name: string): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error(`Uso: npm run download:background-pack -- ${name} <valor>`);
+    console.error(`Uso: yarn download:background-pack ${name} <valor>`);
     process.exit(1);
   }
   return value;
@@ -80,6 +80,7 @@ async function main() {
     ...(limit ? ["--playlist-items", `1-${limit}`] : []),
     "-o",
     `${outputDir}/%(playlist_index)s - %(title)s.%(ext)s`,
+    "--",
     playlistUrl,
   ]);
 

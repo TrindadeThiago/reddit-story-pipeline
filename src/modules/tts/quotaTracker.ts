@@ -14,7 +14,13 @@ export class QuotaTracker {
   constructor(
     private readonly statePath: string,
     private readonly monthlyLimit: number
-  ) {}
+  ) {
+    if (!Number.isFinite(monthlyLimit) || monthlyLimit <= 0) {
+      throw new Error(
+        `Limite mensal de cota invalido: ${monthlyLimit}. Configure ELEVENLABS_MONTHLY_CHAR_LIMIT com um numero finito maior que zero.`
+      );
+    }
+  }
 
   private currentYearMonth(): string {
     const now = new Date();

@@ -39,4 +39,15 @@ describe("scripts/discard", () => {
 
     expect(moveToDiscarded).not.toHaveBeenCalled();
   });
+
+  it("termina com exit code 1 e nao move nada quando o jobId e malicioso", async () => {
+    process.argv = ["node", "discard.js", "../../etc/passwd"];
+    const exitSpy = mockProcessExit();
+
+    await importScriptAndWait("../../src/scripts/discard.js", () => {
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    expect(moveToDiscarded).not.toHaveBeenCalled();
+  });
 });

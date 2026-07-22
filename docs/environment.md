@@ -3,12 +3,12 @@
 ## Setup
 
 ```bash
-npm install
+yarn install
 cp .env.example .env   # preencher com suas chaves/paths
 ```
 
-Requer Node.js (ESM + `tsx`, ver `package.json`) e as dependências externas
-abaixo instaladas fora do `npm`.
+Requer Node.js ≥18 (ESM + `tsx`, ver `engines` em `package.json`) e as
+dependências externas abaixo instaladas fora do `yarn`.
 
 ## Dependências externas
 

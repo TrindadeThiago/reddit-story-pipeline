@@ -44,14 +44,17 @@ passar `backgroundQuery` com `backgroundSource: "local"`, por exemplo).
 
 Passos, em ordem:
 
-1. `mkdir` de `storage/pending-review/<jobId>/` (`jobId = "${story.id}-${Date.now()}"`).
-2. `ttsProvider.synthesize(story.body, .../narration.mp3)` → `job.narration`.
-3. `generateCaptions(narration.audioFilePath, .../captions.srt, whisperModelSize)` → `job.captions` (inclui geração do `.ass`, ver [captions-highlight.md](./captions-highlight.md)).
-4. Vídeo de fundo, conforme `deps.backgroundSource`:
-   - `"pexels"`: `findBackgroundVideo(backgroundQuery, pexelsApiKey, pexelsApiUrl)` seguido de `downloadBackgroundVideo` para `.../background.mp4` local.
-   - `"local"`: `buildLocalBackgroundVideo(backgroundPackDir, backgroundPackIndexPath, narrationDurationSeconds, .../background.mp4)`, onde `narrationDurationSeconds` vem do `endSeconds` da última palavra de `job.captions.words` (a legenda já foi gerada no passo anterior).
-5. `composeVideo({ narrationAudioPath, backgroundVideoPath, captionsAssPath, outputPath })` → `job.video`.
-6. `enqueueForReview(job)` — grava `job.json` em `storage/pending-review/<jobId>/`.
+1. `assertSafeId(story.id, "story.id")` — recusa `id`s fora da whitelist
+   `^[A-Za-z0-9_-]+$` antes de qualquer I/O (fecha path traversal e injeção
+   no filtergraph do ffmpeg).
+2. `mkdir` de `storage/pending-review/<jobId>/` (`jobId = "${story.id}-${Date.now()}"`).
+3. `ttsProvider.synthesize(story.body, .../narration.mp3)` → `job.narration`.
+4. `generateCaptions(narration.audioFilePath, .../captions.srt, whisperModelSize)` → `job.captions` (inclui geração do `.ass`, ver [captions-highlight.md](./captions-highlight.md)).
+5. Vídeo de fundo, conforme `deps.backgroundSource` — resulta em um `BackgroundInput` passado para `composeVideo`:
+   - `"pexels"`: `findBackgroundVideo(backgroundQuery, pexelsApiKey, pexelsApiUrl)` seguido de `downloadBackgroundVideo` para `.../background.mp4` local → `{ kind: "single", videoPath }`.
+   - `"local"`: `selectLocalBackgroundClips(backgroundPackIndexPath, narrationDurationSeconds)`, onde `narrationDurationSeconds` vem do `endSeconds` da última palavra de `job.captions.words` (a legenda já foi gerada no passo anterior) → `{ kind: "clips", packDir: backgroundPackDir, clips }`. Só seleciona os clipes; não roda ffmpeg.
+6. `composeVideo({ narrationAudioPath, background, captionsAssPath, outputPath })` → `job.video`. Roda um único comando ffmpeg (concat dos clipes quando aplicável + escala/corte + legenda), ver detalhes na seção do próprio módulo.
+7. `enqueueForReview(job)` — grava `job.json` em `storage/pending-review/<jobId>/`.
 
 Cada passo é envolvido por `runStage(stage, jobId, fn)`, que recontextualiza
 qualquer exceção como:
@@ -247,24 +250,25 @@ Roda em cada vídeo (`.mp4`/`.mov`/`.mkv`/`.webm`) da pasta indicada
 
 ## `src/modules/video/localBackgroundProvider.ts`
 
-### `buildLocalBackgroundVideo(packDir, indexPath, targetDurationSeconds, outputPath): Promise<void>`
+### `pickClips(index: BackgroundPackIndex, targetDurationSeconds): FlatClip[]`
 
-Monta um vídeo de fundo local a partir do `index.json` gerado por
-`indexBackgroundPack`, sem depender do Pexels:
+Escolhe (sem tocar em ffmpeg) os clipes locais que cobrem a duração alvo:
 
 1. Lê e achata (`flattenClips`) todos os clipes de todos os vídeos do
    índice numa lista única.
-2. `pickClips` embaralha (`shuffle`, `Math.random()`) essa lista e acumula
-   clipes até somar `targetDurationSeconds + 2s` (margem contra
-   arredondamento de encode). Se o pack inteiro não bastar, reembaralha e
-   repete clipes até atingir a duração — nunca falha por "pack curto
-   demais", só reutiliza trechos.
-3. `assembleClips` monta um comando `ffmpeg` (via `fluent-ffmpeg`) com **um
-   input por clipe selecionado** (`-ss`/`-t` para recortar cada trecho do
-   arquivo de origem), concatenando todos via filtro `concat` (não o
-   demuxer — os clipes podem vir de arquivos-fonte com codecs/resoluções
-   diferentes) em vídeo sem áudio (`-an`; `composeVideo` só usa o áudio da
-   narração).
+2. Embaralha (`shuffle`, `Math.random()`) essa lista e acumula clipes até
+   somar `targetDurationSeconds + 2s` (margem contra arredondamento de
+   encode). Se o pack inteiro não bastar, reembaralha e repete clipes até
+   atingir a duração — nunca falha por "pack curto demais", só reutiliza
+   trechos.
+3. Lança erro se o índice não tiver nenhum clipe, ou se todos os clipes
+   indexados tiverem duração zero (evita loop infinito num pack degenerado).
+
+### `selectLocalBackgroundClips(indexPath, targetDurationSeconds): Promise<FlatClip[]>`
+
+Lê `index.json` do disco e delega a `pickClips`. Não monta nenhum vídeo —
+quem faz isso é sempre `composeVideo` (ver abaixo), que recebe a lista de
+clipes e o `packDir` para montar um único comando ffmpeg.
 
 Cada chamada re-sorteia independentemente — histórias diferentes do mesmo
 lote (`generate --input <pasta>`) tipicamente recebem combinações de
@@ -275,23 +279,43 @@ clipes diferentes, mesmo vindo do mesmo pack.
 ### `composeVideo(options: ComposeOptions): Promise<ComposedVideo>`
 
 ```ts
+type BackgroundInput =
+  | { kind: "single"; videoPath: string }
+  | { kind: "clips"; packDir: string; clips: FlatClip[] };
+
 interface ComposeOptions {
   narrationAudioPath: string;
-  backgroundVideoPath: string;
+  background: BackgroundInput;
   captionsAssPath: string;
   outputPath: string;
 }
 ```
 
-1. Valida que os três arquivos de entrada existem (`existsSync`); rejeita
-   com erro nomeando o campo e o caminho que falta, sem sequer chamar o
-   ffmpeg.
-2. Monta o pipeline ffmpeg via `fluent-ffmpeg`:
-   - input 0 = vídeo de fundo, com `-stream_loop -1` (loop infinito, cortado depois pelo `-shortest`).
-   - input 1 = narração.
-   - `complexFilter`: `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920` no vídeo de fundo, seguido de `subtitles=<captionsAssPath>` para queimar a legenda.
-   - output: mapeia o vídeo filtrado + o áudio do input 1, `-shortest` (corta no fim do áudio, que é sempre mais curto que o vídeo de fundo loopado), `libx264`/`aac`.
-3. Resolve com `{ videoFilePath: outputPath }` no evento `end` do ffmpeg; rejeita no evento `error`.
+Roda **um único comando ffmpeg**, qualquer que seja a origem do fundo —
+substituindo o fluxo anterior de duas recodificações (montar o fundo local,
+depois compor) por uma só:
+
+1. Valida que todos os arquivos de entrada existem (`existsSync`) — narração,
+   legenda, e o vídeo único (`kind: "single"`) ou cada arquivo de clipe
+   (`kind: "clips"`); rejeita com erro nomeando o campo e o caminho que
+   falta, sem sequer chamar o ffmpeg. Rejeita também se `kind: "clips"` vier
+   com `clips: []`.
+2. Registra os inputs conforme o tipo de fundo:
+   - `"single"`: um input com `-stream_loop -1` (loop infinito, cortado
+     depois pelo `-shortest`).
+   - `"clips"`: um input por clipe (`-ss`/`-t` para recortar cada trecho do
+     arquivo de origem).
+   - Por último, sempre um input com o áudio da narração.
+3. Monta o `complexFilter`:
+   - `"clips"`: `setpts=PTS-STARTPTS` em cada clipe + `concat=n=<N>:v=1:a=0`
+     produzindo `[outv]` (filtro `concat`, não o demuxer — os clipes podem
+     vir de arquivos-fonte com codecs/resoluções diferentes).
+   - Em seguida (ambos os casos): `scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920`
+     seguido de `subtitles=<captionsAssPath>` para queimar a legenda.
+4. Output: mapeia o vídeo filtrado + o áudio da narração, `-shortest` (corta
+   no fim do áudio), `libx264`/`aac`.
+5. Resolve com `{ videoFilePath: outputPath }` no evento `end` do ffmpeg;
+   rejeita no evento `error`.
 
 ## `src/modules/review/reviewQueue.ts`
 

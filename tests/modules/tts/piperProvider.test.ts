@@ -38,6 +38,11 @@ describe("PiperProvider", () => {
     vi.restoreAllMocks();
   });
 
+  it("declara fileExtension wav (piper sempre gera WAV)", () => {
+    const provider = new PiperProvider("/models/pt_BR.onnx", "0.85");
+    expect(provider.fileExtension).toBe("wav");
+  });
+
   it("chama o binario piper com os parametros corretos e escreve o texto no stdin", async () => {
     const provider = new PiperProvider("/models/pt_BR.onnx", "0.85");
 
