@@ -3,46 +3,65 @@
 ## Como rodar
 
 ```bash
-npm test
+npm test              # roda a suite uma vez
+npx vitest             # roda em watch mode
+npm run test:coverage  # roda com relatorio de cobertura (threshold: 100%)
 ```
 
-Executa `tsx --test src/**/*.test.ts` — usa o test runner nativo do Node
-(`node:test` + `node:assert/strict`), sem framework externo (nenhum
-Jest/Vitest no projeto).
+Executa via [Vitest](https://vitest.dev/) (`vitest.config.ts` na raiz), que
+substituiu o `node:test` usado anteriormente. Os arquivos de teste ficam em
+`tests/`, espelhando a estrutura de `src/` arquivo a arquivo (ex.:
+`src/modules/tts/quotaTracker.ts` → `tests/modules/tts/quotaTracker.test.ts`).
+`src/types.ts` e os arquivos `index.ts` que só reexportam (barris), além de
+`src/modules/tts/ttsProvider.ts` (somente a interface `TtsProvider`), não têm
+teste correspondente por não conterem lógica executável.
 
 ## Cobertura atual
 
-Hoje só `src/modules/reddit/fetchStories.test.ts` tem testes automatizados:
+Todo módulo de lógica de `src/` tem teste automatizado correspondente em
+`tests/`, com 100% de cobertura de linhas, funções, branches e statements
+(threshold configurado em `vitest.config.ts`):
 
-1. **"fetchStories usa OAuth (access_token + Bearer) e filtra por
-   score/tamanho"** — mocka `global.fetch`, intercepta tanto a chamada de
-   token (`reddit.com/api/v1/access_token`) quanto a de dados
-   (`oauth.reddit.com/r/AskHistorians/top`), e confirma:
-   - o header `Authorization: Basic <base64(client_id:client_secret)>` na chamada de token;
-   - o header `Authorization: Bearer <token>` na chamada de dados;
-   - que um post abaixo de `minBodyLength` é filtrado fora do resultado.
-2. **"fetchStories reporta erro claro se faltarem credenciais"** — roda sem
-   `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`, confirma que a função devolve
-   `[]` (não lança) e que a mensagem de erro logada menciona as variáveis
-   ausentes.
+- `config/env` — defaults e valores vindos de `process.env`.
+- `modules/reddit/fetchStories` — fluxo OAuth (token cacheado + Bearer),
+  filtro por score/tamanho, isolamento de falha por subreddit, e o caso de
+  credenciais ausentes (migrado de `fetchStories.missing-credentials.test.ts`).
+- `modules/captions/generateCaptions` e `buildHighlightedAss` — resolução do
+  interpretador Python (venv/`WHISPERX_PYTHON_BIN`/PATH), montagem do `.ass`
+  com destaque por palavra, casos de borda (lista vazia, >4 palavras).
+- `modules/tts/piperProvider`, `elevenLabsProvider`, `quotaTracker` — sucesso,
+  falha do binário/API, e o bloqueio de cota mensal do ElevenLabs.
+- `modules/video/backgroundPackIndexer`, `backgroundVideoProvider`,
+  `composeVideo`, `localBackgroundProvider` — detecção/fusão de cenas,
+  seleção de vídeo vertical no Pexels, composição via `fluent-ffmpeg`.
+- `modules/review/reviewQueue` — as quatro transições de estado da fila.
+- `pipeline.ts` — orquestração das etapas, isolamento de falha por etapa
+  (`runStage`), e as duas fontes de vídeo de fundo (local/Pexels).
+- `scripts/*.ts` — parsing de flags de CLI, encaminhamento para os módulos
+  injetados, e os exit codes de erro (`process.exit(1)`).
 
-Os demais módulos (`piperProvider`, `elevenLabsProvider`, `quotaTracker`,
-`generateCaptions`, `buildHighlightedAss`, `backgroundVideoProvider`,
-`composeVideo`, `reviewQueue`, `pipeline`) não têm testes automatizados no
-repositório — foram validados manualmente durante o desenvolvimento (ver
-checklist abaixo), mas não há um regression test que rode em CI.
+### Padrão usado nos testes
 
-### Padrão usado no teste existente (para novos testes)
-
-- Mock de rede via substituição direta de `global.fetch` (sem biblioteca de mock), restaurado em `finally`.
-- Reimport do módulo sob teste com um query string único (`?t=${Date.now()}`) a cada teste, para resetar caches em memória no nível do módulo (aqui, o `tokenCache` de `fetchStories`).
-- Captura de `console.error` substituindo a função global temporariamente, para asserir sobre mensagens de log sem poluir a saída do test runner.
+- Mock de rede via `tests/helpers/mockFetch.ts` (`vi.stubGlobal`), sem
+  biblioteca externa de mock de HTTP.
+- Diretórios temporários reais (`tests/helpers/tempDir.ts`, via
+  `fs.mkdtempSync`) para lógica de filesystem, em vez de mockar `node:fs`
+  chamada a chamada.
+- `vi.mock` para dependências pesadas por módulo: `fluent-ffmpeg`
+  (`composeVideo`, `backgroundPackIndexer`, `localBackgroundProvider`),
+  `node:child_process` (`piperProvider`, `download-background-pack.ts`).
+- Scripts de CLI (`src/scripts/*.ts`) chamam `main().catch(...)` no
+  top-level do módulo — os testes usam `tests/helpers/cli.ts`
+  (`importScriptAndWait`/`mockProcessExit`) para importar o script, mockar
+  `process.exit` (lançando em vez de encerrar o processo de teste) e
+  aguardar os efeitos colaterais via `vi.waitFor`.
 
 ## Validação com dependências reais
 
 Como o pipeline depende de binários/serviços externos pesados (ffmpeg,
-Piper, WhisperX, Reddit, Pexels, ElevenLabs), grande parte da validação
-"ponta a ponta" não é coberta por testes automatizados — é feita manualmente
+Piper, WhisperX, Reddit, Pexels, ElevenLabs), a validação "ponta a ponta"
+com esses serviços reais não é coberta pela suite automatizada (que roda
+100% mockada, sem rede nem binários) — continua sendo feita manualmente
 numa máquina com tudo instalado e credenciais reais.
 
 Resumo do que já foi confirmado dessa forma:
@@ -63,7 +82,8 @@ E o que ainda depende de confirmação numa máquina real:
 
 A legenda com highlight de palavra ([captions-highlight.md](./captions-highlight.md))
 foi validada nesse mesmo espírito: gerando um job real e extraindo um frame
-com `ffmpeg -ss ... -frames:v 1` para inspeção visual, em vez de um teste
-automatizado (não há assertion prática para "a cor certa está no pixel
-certo" sem um framework de comparação de imagem, que não existe hoje no
-projeto).
+com `ffmpeg -ss ... -frames:v 1` para inspeção visual, em vez de comparação
+automatizada de imagem (não há framework de comparação de imagem no
+projeto) — o teste automatizado de `buildHighlightedAss` cobre a
+estrutura/formatação do `.ass` gerado, não a renderização visual do
+destaque.

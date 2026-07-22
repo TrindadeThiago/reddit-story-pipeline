@@ -10,6 +10,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Test coverage reports (Vitest)
+coverage/
+
 # Generated pipeline output
 storage/pending-review/*
 storage/discarded/*
