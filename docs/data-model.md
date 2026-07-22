@@ -97,8 +97,9 @@ Formato do `index.json` gerado por `index:background-pack`
 (`indexBackgroundPack`, ver [modules.md](./modules.md#srcmodulesvideobackgroundpackindexerts)).
 Cada `BackgroundClip` é um trecho contínuo (sem corte de cena no meio)
 dentro de um dos vídeos do pack local; é a unidade que o provider local
-(`buildLocalBackgroundVideo`) sorteia e concatena para montar o vídeo de
-fundo de uma história, quando `BACKGROUND_SOURCE=local`.
+(`selectLocalBackgroundClips`/`pickClips`) sorteia, e que `composeVideo`
+concatena para montar o vídeo de fundo de uma história, quando
+`BACKGROUND_SOURCE=local`.
 
 ## `ReviewDecision`
 

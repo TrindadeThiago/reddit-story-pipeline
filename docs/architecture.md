@@ -35,7 +35,7 @@ rodando outro comando CLI apontando para o `jobId`.
                                │
               ┌────────────────┼────────────────────┐
               ▼                ▼                     ▼
-        npm run publish   npm run discard   npm run regenerate:elevenlabs
+        yarn run publish   yarn discard   yarn regenerate:elevenlabs
         → approved →            → discarded    → reroda 1–5 com ElevenLabs,
           published                              cria job NOVO
 ```
@@ -86,11 +86,14 @@ ffmpeg, `composeVideo` não sabe que existe Pexels.
 Isso vale para a fonte `pexels`. A fonte alternativa `local`
 (`BACKGROUND_SOURCE=local`) não baixa nada em tempo de execução do
 pipeline — ela consome um pack de vídeos **já baixado** (`download:background-pack`,
-via `yt-dlp`) e **já indexado** por cena (`index:background-pack`), e monta
-o vídeo de fundo localmente (`buildLocalBackgroundVideo`) sorteando e
-concatenando clipes do índice. O pipeline em si (`pipeline.ts`) só decide
-*qual* das duas estratégias rodar, com base em `deps.backgroundSource` —
-ver [modules.md](./modules.md#srcpipelinets).
+via `yt-dlp`) e **já indexado** por cena (`index:background-pack`), e apenas
+**seleciona** os clipes que cobrem a duração da narração
+(`selectLocalBackgroundClips`), sem rodar ffmpeg nessa etapa. O pipeline em
+si (`pipeline.ts`) só decide *qual* das duas estratégias rodar, com base em
+`deps.backgroundSource` — ver [modules.md](./modules.md#srcpipelinets).
+
+Em ambos os casos, quem efetivamente monta o vídeo final é sempre
+`composeVideo`, num único comando ffmpeg (ver seção seguinte).
 
 ### 5. Legenda com timestamp por palavra, não por frase
 
@@ -136,9 +139,17 @@ reembalada com contexto (`etapa` + `jobId`) e relançada — interrompendo
 O diagrama acima mostra o caminho `BACKGROUND_SOURCE=pexels` (padrão). Com
 `BACKGROUND_SOURCE=local`, os passos `findBackgroundVideo`/
 `downloadBackgroundVideo` são substituídos por uma única chamada a
-`buildLocalBackgroundVideo(packDir, indexPath, narrationDurationSeconds, ...)`,
-que lê o `index.json` local (sem chamada de rede) e monta o vídeo via
-ffmpeg diretamente.
+`selectLocalBackgroundClips(indexPath, narrationDurationSeconds)`, que lê o
+`index.json` local (sem chamada de rede nem ffmpeg) e apenas escolhe quais
+clipes usar.
+
+Em ambos os casos, `composeVideo()` recebe uma descrição do fundo
+(`{ kind: "single", videoPath }` para Pexels, ou `{ kind: "clips", packDir, clips }`
+para o pack local) e roda **um único comando ffmpeg** que concatena os
+clipes quando aplicável, escala/corta para 1080x1920 e embute a legenda —
+tudo na mesma recodificação. Antes desta etapa (feature `012-melhorias-recomendadas`),
+o fluxo local rodava dois comandos ffmpeg em sequência (montar o fundo, depois
+compor); agora roda só um, o que reduz o tempo de geração por vídeo.
 
 ## Stack técnica
 
@@ -156,7 +167,7 @@ ffmpeg diretamente.
 ## Por que não há servidor/API/UI
 
 O projeto é deliberadamente uma ferramenta de linha de comando de uso
-pessoal/local: uma pessoa roda `npm run generate`, revisa os vídeos abrindo
+pessoal/local: uma pessoa roda `yarn generate`, revisa os vídeos abrindo
 a pasta `storage/pending-review` num player qualquer, e decide via outro
 comando CLI. Não há necessidade (ainda) de multiusuário, autenticação,
 concorrência entre execuções ou UI web — introduzir essas camadas agora

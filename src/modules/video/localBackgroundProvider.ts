@@ -1,9 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import ffmpeg from "fluent-ffmpeg";
 import type { BackgroundPackIndex } from "../../types.js";
 
-interface FlatClip {
+export interface FlatClip {
   fileName: string;
   startSeconds: number;
   durationSeconds: number;
@@ -35,10 +33,13 @@ function flattenClips(index: BackgroundPackIndex): FlatClip[] {
  * ate somar pelo menos targetDurationSeconds. Se o pack inteiro nao for
  * suficiente, reembaralha e permite repetir clipes.
  */
-function pickClips(index: BackgroundPackIndex, targetDurationSeconds: number): FlatClip[] {
+export function pickClips(index: BackgroundPackIndex, targetDurationSeconds: number): FlatClip[] {
   const allClips = flattenClips(index);
   if (allClips.length === 0) {
     throw new Error("Pack de videos de fundo nao tem nenhum clipe indexado.");
+  }
+  if (allClips.every((clip) => clip.durationSeconds <= 0)) {
+    throw new Error("Pack de videos de fundo so tem clipes de duracao zero -- reindexe o pack.");
   }
 
   const selected: FlatClip[] = [];
@@ -56,49 +57,17 @@ function pickClips(index: BackgroundPackIndex, targetDurationSeconds: number): F
   return selected;
 }
 
-function assembleClips(
-  packDir: string,
-  clips: FlatClip[],
-  outputPath: string
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const command = ffmpeg();
-
-    clips.forEach((clip) => {
-      command
-        .input(join(packDir, clip.fileName))
-        .inputOptions(["-ss", String(clip.startSeconds), "-t", String(clip.durationSeconds)]);
-    });
-
-    const trims = clips.map((_, i) => `[${i}:v]setpts=PTS-STARTPTS[v${i}]`);
-    const concatInputs = clips.map((_, i) => `[v${i}]`).join("");
-    const filterComplex = [...trims, `${concatInputs}concat=n=${clips.length}:v=1:a=0[outv]`];
-
-    command
-      .complexFilter(filterComplex)
-      .map("[outv]")
-      .outputOptions(["-c:v libx264", "-an"])
-      .output(outputPath)
-      .on("end", () => resolve())
-      .on("error", reject)
-      .run();
-  });
-}
-
 /**
- * Monta um video de fundo local juntando clipes inteiros (sem cortar no meio
- * de uma cena) do pack indexado por `index:background-pack`, a partir dos
- * trechos curtos ja identificados pelo indexador de cenas.
+ * Le o indice do pack de fundo local e seleciona os clipes que cobrem a
+ * duracao alvo. Nao monta nenhum video -- so escolhe os trechos; a
+ * composicao final (concat + escala + legendas) acontece em um unico
+ * comando ffmpeg em `composeVideo`.
  */
-export async function buildLocalBackgroundVideo(
-  packDir: string,
+export async function selectLocalBackgroundClips(
   indexPath: string,
-  targetDurationSeconds: number,
-  outputPath: string
-): Promise<void> {
+  targetDurationSeconds: number
+): Promise<FlatClip[]> {
   const raw = await readFile(indexPath, "utf-8");
   const index = JSON.parse(raw) as BackgroundPackIndex;
-
-  const clips = pickClips(index, targetDurationSeconds);
-  await assembleClips(packDir, clips, outputPath);
+  return pickClips(index, targetDurationSeconds);
 }

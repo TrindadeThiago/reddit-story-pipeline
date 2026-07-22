@@ -1,10 +1,19 @@
 import { join } from "node:path";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
+import { finished } from "node:stream/promises";
 import type { PipelineJob, RedditStory } from "./types.js";
 import type { TtsProvider } from "./modules/tts/index.js";
 import { generateCaptions } from "./modules/captions/index.js";
-import { buildLocalBackgroundVideo, findBackgroundVideo, composeVideo } from "./modules/video/index.js";
+import {
+  selectLocalBackgroundClips,
+  findBackgroundVideo,
+  composeVideo,
+  type BackgroundInput,
+} from "./modules/video/index.js";
 import { enqueueForReview } from "./modules/review/index.js";
+import { assertSafeId } from "./modules/shared/assertSafeId.js";
 
 type BackgroundSourceDeps =
   | {
@@ -39,15 +48,19 @@ async function runStage<T>(stage: string, jobId: string, fn: () => Promise<T>): 
 
 /**
  * Baixa o video de fundo (URL remota da fase 06) para um arquivo local,
- * ja que composeVideo (fase 07) opera sobre caminhos locais.
+ * ja que composeVideo (fase 07) opera sobre caminhos locais. Via streaming
+ * para nao carregar o arquivo inteiro (potencialmente centenas de MB) em
+ * memoria de uma vez.
  */
 async function downloadBackgroundVideo(downloadUrl: string, destPath: string): Promise<void> {
   const res = await fetch(downloadUrl);
   if (!res.ok) {
     throw new Error(`Download do video de fundo falhou: HTTP ${res.status}`);
   }
-  const buffer = Buffer.from(await res.arrayBuffer());
-  await writeFile(destPath, buffer);
+  if (!res.body) {
+    throw new Error("Download do video de fundo falhou: resposta sem corpo.");
+  }
+  await finished(Readable.fromWeb(res.body as any).pipe(createWriteStream(destPath)));
 }
 
 /**
@@ -59,6 +72,7 @@ export async function runPipelineForStory(
   story: RedditStory,
   deps: RunPipelineDeps
 ): Promise<PipelineJob> {
+  assertSafeId(story.id, "story.id");
   const jobId = `${story.id}-${Date.now()}`;
   const workDir = join("storage", "pending-review", jobId);
 
@@ -67,7 +81,7 @@ export async function runPipelineForStory(
   await mkdir(workDir, { recursive: true });
 
   job.narration = await runStage("narração", jobId, () =>
-    deps.ttsProvider.synthesize(story.body, join(workDir, "narration.mp3"))
+    deps.ttsProvider.synthesize(story.body, join(workDir, `narration.${deps.ttsProvider.fileExtension}`))
   );
 
   job.captions = await runStage("legenda", jobId, () =>
@@ -78,32 +92,31 @@ export async function runPipelineForStory(
     )
   );
 
-  const backgroundVideoLocalPath = join(workDir, "background.mp4");
-  await runStage("vídeo de fundo", jobId, async () => {
+  const background: BackgroundInput = await runStage("vídeo de fundo", jobId, async () => {
     if (deps.backgroundSource === "local") {
       const lastWord = job.captions!.words.at(-1);
       const narrationDurationSeconds = lastWord?.endSeconds ?? 0;
-      await buildLocalBackgroundVideo(
-        deps.backgroundPackDir,
+      const clips = await selectLocalBackgroundClips(
         deps.backgroundPackIndexPath,
-        narrationDurationSeconds,
-        backgroundVideoLocalPath
+        narrationDurationSeconds
       );
-      return;
+      return { kind: "clips", packDir: deps.backgroundPackDir, clips };
     }
 
-    const background = await findBackgroundVideo(
+    const pexelsBackground = await findBackgroundVideo(
       deps.backgroundQuery,
       deps.pexelsApiKey,
       deps.pexelsApiUrl
     );
-    await downloadBackgroundVideo(background.downloadUrl, backgroundVideoLocalPath);
+    const backgroundVideoLocalPath = join(workDir, "background.mp4");
+    await downloadBackgroundVideo(pexelsBackground.downloadUrl, backgroundVideoLocalPath);
+    return { kind: "single", videoPath: backgroundVideoLocalPath };
   });
 
   job.video = await runStage("composição", jobId, () =>
     composeVideo({
       narrationAudioPath: job.narration!.audioFilePath,
-      backgroundVideoPath: backgroundVideoLocalPath,
+      background,
       captionsAssPath: job.captions!.assFilePath,
       outputPath: join(workDir, "final.mp4"),
     })
