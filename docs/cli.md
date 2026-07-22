@@ -1,10 +1,10 @@
 # CLI — referência de comandos
 
-Todos os comandos são `npm run <script>`, definidos em `package.json` e
+Todos os comandos são `yarn <script>`, definidos em `package.json` e
 implementados em `src/scripts/`. Variáveis de ambiente necessárias em
 [environment.md](./environment.md).
 
-## `npm run generate [-- --input <pasta>] [--story <id-ou-arquivo>] [--background-query <termo>] [--background-source <pexels|local>]`
+## `yarn generate [-- --input <pasta>] [--story <id-ou-arquivo>] [--background-query <termo>] [--background-source <pexels|local>]`
 
 Implementação: `src/scripts/run-pipeline.ts`.
 
@@ -42,7 +42,7 @@ erro explícito.
 
 Cada arquivo vira um `PipelineJob` independente. `--input`/`--story`/
 `--background-query`/`--background-source` sem valor depois (ex:
-`npm run generate -- --input`) abortam com mensagem de uso
+`yarn generate --input`) abortam com mensagem de uso
 (`process.exit(1)`), sem tentar interpretar o próximo argumento como outra
 coisa.
 
@@ -57,7 +57,7 @@ coisa.
 - `local`: usa um pack de vídeos próprio, já baixado (`download:background-pack`)
   e indexado (`index:background-pack`). Cada história sorteia
   independentemente uma combinação de clipes do pack até bater a duração
-  da narração — ver [`buildLocalBackgroundVideo`](./modules.md#srcmodulesvideolocalbackgroundproviderts).
+  da narração — ver [`selectLocalBackgroundClips`](./modules.md#srcmodulesvideolocalbackgroundproviderts).
 
 Variáveis obrigatórias: `PIPER_MODEL_PATH`, `PEXELS_API_KEY` (só com
 `--background-source pexels`, o padrão) (+ `REDDIT_CLIENT_ID`/`REDDIT_CLIENT_SECRET`
@@ -66,7 +66,7 @@ se **não** usar `--input`).
 Saída no terminal: um `Job pronto para revisao: <jobId>` por história
 processada com sucesso.
 
-## `npm run download:background-pack -- [--url <playlist>] [--output <pasta>] [--limit <n>]`
+## `yarn download:background-pack [--url <playlist>] [--output <pasta>] [--limit <n>]`
 
 Implementação: `src/scripts/download-background-pack.ts`.
 
@@ -82,7 +82,7 @@ depois são cortados em cena pelo `index:background-pack`.
 Se `yt-dlp` não estiver no `PATH`, aborta com mensagem indicando como
 instalar (`pipx install yt-dlp`).
 
-## `npm run index:background-pack -- [--dir <pasta>] [--output <arquivo.json>] [--threshold <0-1>] [--min-clip-seconds <segundos>]`
+## `yarn index:background-pack [--dir <pasta>] [--output <arquivo.json>] [--threshold <0-1>] [--min-clip-seconds <segundos>]`
 
 Implementação: `src/scripts/index-background-pack.ts`.
 
@@ -98,7 +98,7 @@ sortear clipes **inteiros**, sem cortar no meio de uma cena.
 - `--threshold`: sensibilidade da detecção (padrão `0.3`; menor = mais cortes detectados).
 - `--min-clip-seconds`: funde clipes menores que isso com o vizinho (padrão `1.5`).
 
-## `npm run publish -- <jobId>`
+## `yarn run publish <jobId>`
 
 Implementação: `src/scripts/publish.ts`.
 
@@ -112,18 +112,18 @@ implementada** — o comando só termina com um `TODO: acionar upload via API
 da plataforma desejada` no log. Ver
 [roadmap.md](./roadmap.md#publicação-automática-nas-plataformas).
 
-Sem argumento: aborta com `Uso: npm run publish -- <jobId>`.
+Sem argumento: aborta com `Uso: yarn run publish <jobId>`.
 
-## `npm run discard -- <jobId>`
+## `yarn discard <jobId>`
 
 Implementação: `src/scripts/discard.ts`.
 
 Caminho 3 da revisão manual: conteúdo/história não presta. Move o job de
 `pending-review/<jobId>` para `discarded/<jobId>` (`moveToDiscarded`).
 
-Sem argumento: aborta com `Uso: npm run discard -- <jobId>`.
+Sem argumento: aborta com `Uso: yarn discard <jobId>`.
 
-## `npm run regenerate:elevenlabs -- <jobId> [--background-query <termo>] [--background-source <pexels|local>]`
+## `yarn regenerate:elevenlabs <jobId> [--background-query <termo>] [--background-source <pexels|local>]`
 
 Implementação: `src/scripts/regenerate-with-elevenlabs.ts`.
 
@@ -137,14 +137,14 @@ Caminho 2 da revisão manual: "aprovado, mas a voz do Piper ficou fraca".
 Variáveis obrigatórias: `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_ID` (+ `PEXELS_API_KEY`
 se `--background-source` for `pexels`, o padrão).
 
-Sem argumento: aborta com `Uso: npm run regenerate:elevenlabs -- <jobId>`.
+Sem argumento: aborta com `Uso: yarn regenerate:elevenlabs <jobId>`.
 
 ⚠️ A query/fonte do vídeo de fundo **não** é reaproveitada do job original —
 usa o mesmo padrão (`BACKGROUND_QUERY`/`BACKGROUND_SOURCE`, ou as flags
 passadas nesta chamada) que `generate` usaria, não o que foi usado quando o
 job original foi criado.
 
-## `npm test`
+## `yarn test`
 
 Roda `tsx --test src/**/*.test.ts` (runner nativo `node:test`, sem
 framework externo). Ver [testing.md](./testing.md).

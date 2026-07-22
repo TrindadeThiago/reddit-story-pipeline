@@ -4,7 +4,7 @@ import { ENV } from "../config/index.js";
 import { indexBackgroundPack } from "../modules/video/index.js";
 
 /**
- * Uso: npm run index:background-pack -- [--dir <pasta>] [--output <arquivo.json>]
+ * Uso: yarn index:background-pack [--dir <pasta>] [--output <arquivo.json>]
  *      [--threshold <0-1>] [--min-clip-seconds <segundos>]
  * Roda deteccao de cena (ffmpeg) em cada video da pasta do pack (baixada via
  * download:background-pack) e gera um JSON com os intervalos de cada trecho
@@ -22,7 +22,7 @@ function getFlag(name: string): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error(`Uso: npm run index:background-pack -- ${name} <valor>`);
+    console.error(`Uso: yarn index:background-pack ${name} <valor>`);
     process.exit(1);
   }
   return value;

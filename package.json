@@ -13,10 +13,12 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "dotenv": "^16.4.5",
-    "fluent-ffmpeg": "^2.1.2",
-    "node-fetch": "^3.3.2"
+    "fluent-ffmpeg": "^2.1.2"
   },
   "devDependencies": {
     "@types/fluent-ffmpeg": "^2.1.24",
