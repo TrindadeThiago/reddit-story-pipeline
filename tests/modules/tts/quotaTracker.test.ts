@@ -63,4 +63,31 @@ describe("QuotaTracker", () => {
       await expect(tracker.assertHasBudget(999)).resolves.toBeUndefined();
     });
   });
+
+  it("lanca erro na construcao quando o limite mensal e NaN", async () => {
+    await withTempDir(async (dir) => {
+      const statePath = join(dir, "quota.json");
+      expect(() => new QuotaTracker(statePath, Number("abc"))).toThrow(
+        /Limite mensal de cota invalido/
+      );
+    });
+  });
+
+  it("lanca erro na construcao quando o limite mensal e zero", async () => {
+    await withTempDir(async (dir) => {
+      const statePath = join(dir, "quota.json");
+      expect(() => new QuotaTracker(statePath, 0)).toThrow(
+        /Limite mensal de cota invalido/
+      );
+    });
+  });
+
+  it("lanca erro na construcao quando o limite mensal e negativo", async () => {
+    await withTempDir(async (dir) => {
+      const statePath = join(dir, "quota.json");
+      expect(() => new QuotaTracker(statePath, -500)).toThrow(
+        /Limite mensal de cota invalido/
+      );
+    });
+  });
 });
