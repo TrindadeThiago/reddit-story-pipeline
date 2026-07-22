@@ -6,7 +6,7 @@ describe("fetchStories (credenciais ausentes)", () => {
     vi.resetModules();
   });
 
-  it("reporta erro claro se faltarem credenciais", async () => {
+  it("lanca erro explicito em vez de retornar lista vazia quando faltam credenciais", async () => {
     const originalClientId = process.env.REDDIT_CLIENT_ID;
     const originalClientSecret = process.env.REDDIT_CLIENT_SECRET;
     delete process.env.REDDIT_CLIENT_ID;
@@ -16,29 +16,24 @@ describe("fetchStories (credenciais ausentes)", () => {
       throw new Error("fetch nao deveria ser chamado sem credenciais");
     });
 
-    const originalError = console.error;
-    const loggedErrors: string[] = [];
-    console.error = (msg: string) => loggedErrors.push(msg);
-
     try {
       vi.resetModules();
       const { fetchStories } = await import("../../../src/modules/reddit/fetchStories.js");
-      const stories = await fetchStories({
-        subreddits: ["AskHistorians"],
-        minScore: 500,
-        minBodyLength: 800,
-        limit: 5,
-      });
-      expect(stories.length).toBe(0);
+
+      await expect(
+        fetchStories({
+          subreddits: ["AskHistorians"],
+          minScore: 500,
+          minBodyLength: 800,
+          limit: 5,
+        })
+      ).rejects.toThrow(
+        /\[fetchStories\] Falha ao autenticar no Reddit.*REDDIT_CLIENT_ID\/REDDIT_CLIENT_SECRET ausentes/
+      );
     } finally {
-      console.error = originalError;
       fetchStub.restore();
       process.env.REDDIT_CLIENT_ID = originalClientId;
       process.env.REDDIT_CLIENT_SECRET = originalClientSecret;
     }
-
-    expect(
-      loggedErrors.some((m) => m.includes("REDDIT_CLIENT_ID/REDDIT_CLIENT_SECRET ausentes"))
-    ).toBe(true);
   });
 });

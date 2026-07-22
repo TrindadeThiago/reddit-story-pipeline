@@ -151,6 +151,23 @@ describe("scripts/run-pipeline", () => {
     });
   });
 
+  it("termina com exit code 1 quando um arquivo de historia manual esta sem o campo body", async () => {
+    await withTempDir(async (dir) => {
+      await writeFile(
+        join(dir, "story-incompleta.json"),
+        JSON.stringify({ id: "a", subreddit: "x", title: "t", url: "u", score: 1 })
+      );
+      process.argv = ["node", "run-pipeline.js", "--input", dir];
+      const exitSpy = mockProcessExit();
+
+      await importScriptAndWait("../../src/scripts/run-pipeline.js", () => {
+        expect(exitSpy).toHaveBeenCalledWith(1);
+      });
+
+      expect(runPipelineForStory).not.toHaveBeenCalled();
+    });
+  });
+
   it("termina com exit code 1 quando --story nao corresponde a nenhuma historia", async () => {
     await withTempDir(async (dir) => {
       await writeFile(

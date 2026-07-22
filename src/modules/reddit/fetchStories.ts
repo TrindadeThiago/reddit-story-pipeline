@@ -70,16 +70,19 @@ export async function fetchStories(
   const results: RedditStory[] = [];
   const userAgent = ENV.REDDIT_USER_AGENT;
 
+  // Falha de autenticacao e uma falha global de configuracao (nao de um
+  // subreddit especifico) -- diferente de erros de busca por subreddit
+  // (isolados abaixo), aqui deve interromper a execucao, nao retornar [].
   let accessToken: string;
   try {
     accessToken = await getAccessToken();
   } catch (error) {
-    console.error(
+    throw new Error(
       `[fetchStories] Falha ao autenticar no Reddit: ${
         error instanceof Error ? error.message : String(error)
-      }`
+      }`,
+      { cause: error }
     );
-    return results;
   }
 
   for (const subreddit of options.subreddits) {

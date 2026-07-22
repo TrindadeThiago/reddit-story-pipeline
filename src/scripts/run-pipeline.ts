@@ -4,6 +4,7 @@ import { ENV } from "../config/index.js";
 import { fetchStories } from "../modules/reddit/index.js";
 import { PiperProvider } from "../modules/tts/index.js";
 import { runPipelineForStory } from "../pipeline.js";
+import { assertValidRedditStory } from "../modules/shared/validateStory.js";
 import type { RedditStory } from "../types.js";
 
 function requireEnv<K extends keyof typeof ENV>(name: K): string {
@@ -16,7 +17,7 @@ function requireEnv<K extends keyof typeof ENV>(name: K): string {
 }
 
 /**
- * Uso: npm run generate -- --input caminho/para/pasta [--story <id-ou-arquivo>] --background-query "termo de busca"
+ * Uso: yarn generate --input caminho/para/pasta [--story <id-ou-arquivo>] --background-query "termo de busca"
  * --input: le historias inseridas manualmente (uma por arquivo .json, mesmo formato de
  * RedditStory) a partir de uma pasta, em vez de buscar no Reddit -- util quando a
  * autenticacao/OAuth nao esta disponivel.
@@ -40,13 +41,14 @@ async function loadStoriesFromDirectory(
   for (const fileName of jsonFiles) {
     const filePath = join(dirPath, fileName);
     const raw = await readFile(filePath, "utf-8");
-    const story = JSON.parse(raw) as RedditStory;
-    if (Array.isArray(story)) {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
       throw new Error(
         `Arquivo de historia manual deve conter um unico objeto JSON, nao um array: ${filePath}`
       );
     }
-    stories.push(story);
+    assertValidRedditStory(parsed, filePath);
+    stories.push(parsed);
   }
 
   if (!storyFilter) {
@@ -78,7 +80,7 @@ function getInputFlag(): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error("Uso: npm run generate -- --input <arquivo.json>");
+    console.error("Uso: yarn generate --input <arquivo.json>");
     process.exit(1);
   }
   return value;
@@ -92,7 +94,7 @@ function getStoryFlag(): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error("Uso: npm run generate -- --input <pasta> --story <id-ou-arquivo>");
+    console.error("Uso: yarn generate --input <pasta> --story <id-ou-arquivo>");
     process.exit(1);
   }
   return value;
@@ -106,7 +108,7 @@ function getBackgroundQueryFlag(): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error("Uso: npm run generate -- --background-query <termo de busca>");
+    console.error("Uso: yarn generate --background-query <termo de busca>");
     process.exit(1);
   }
   return value;
@@ -120,7 +122,7 @@ function getBackgroundSourceFlag(): string | undefined {
   }
   const value = args[flagIndex + 1];
   if (!value) {
-    console.error("Uso: npm run generate -- --background-source <pexels|local>");
+    console.error("Uso: yarn generate --background-source <pexels|local>");
     process.exit(1);
   }
   return value;
