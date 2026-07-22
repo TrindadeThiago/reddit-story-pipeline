@@ -57,4 +57,16 @@ describe("scripts/publish", () => {
 
     expect(moveToPublished).not.toHaveBeenCalled();
   });
+
+  it("termina com exit code 1 e nao move nada quando o jobId e malicioso", async () => {
+    process.argv = ["node", "publish.js", "../../etc/passwd"];
+    const exitSpy = mockProcessExit();
+
+    await importScriptAndWait("../../src/scripts/publish.js", () => {
+      expect(exitSpy).toHaveBeenCalledWith(1);
+    });
+
+    expect(moveToApproved).not.toHaveBeenCalled();
+    expect(moveToPublished).not.toHaveBeenCalled();
+  });
 });
